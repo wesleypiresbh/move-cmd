@@ -4,11 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-<<<<<<< HEAD
-    "build": "NODE_ENV=production next build && mv out dist",
-=======
     "build": "NODE_ENV=production next build && rm -rf dist && cp -r out dist",
->>>>>>> 5f44078 (Atualiza rotas separadas para admin, motorista e passageiro)
     "lint": "eslint ."
   },
   "dependencies": {
