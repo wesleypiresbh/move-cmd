@@ -1,0 +1,53 @@
+
+'use client';
+
+import React, { useState } from 'react';
+import { AppProvider, useAppStore } from '@/lib/StoreProvider';
+import DriverDashboard from '@/components/DriverDashboard';
+import { LogOut } from 'lucide-react';
+import { LoginForm } from '@/components/LoginForm';
+
+function DriverContent() {
+  const { currentUser, setCurrentRole } = useAppStore();
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  if (!isLoggedIn) {
+    return (
+      <LoginForm 
+        type="motorista" 
+        onLogin={(role) => {
+          setCurrentRole(role);
+          setIsLoggedIn(true);
+        }} 
+      />
+    );
+  }
+
+  return (
+    <div className="flex-1 overflow-hidden relative flex flex-col">
+      <div className="absolute top-4 right-4 z-50">
+         <button 
+           onClick={() => {
+             setIsLoggedIn(false);
+           }}
+           className="w-10 h-10 bg-white border border-slate-200 rounded-full flex items-center justify-center text-slate-400 hover:text-red-500 hover:border-red-200 shadow-sm transition-colors"
+           title="Sair"
+         >
+           <LogOut className="w-4 h-4" />
+         </button>
+      </div>
+
+      <DriverDashboard />
+    </div>
+  );
+}
+
+export default function DriverPage() {
+  return (
+    <AppProvider>
+      <div className="h-screen flex flex-col bg-slate-50 font-sans text-slate-900">
+        <DriverContent />
+      </div>
+    </AppProvider>
+  );
+}

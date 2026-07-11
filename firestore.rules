@@ -1,0 +1,103 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if true;
+    }
+
+    function isSignedIn() { return request.auth != null; }
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    function isAdmin() { return isSignedIn() && (request.auth.token.email == 'masteradmin@movecms.com' || (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'operator'))); }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['name', 'role', 'email'])
+        && data.name is string && data.name.size() <= 100
+        && data.role is string && data.role in ['passenger', 'driver', 'admin', 'operator']
+        && data.email is string && data.email.size() <= 100
+        && data.get('avatar', '') is string
+        && data.get('rating', 5) is number
+        && data.get('ridesCompleted', 0) is number
+        && data.get('cpf', '') is string
+        && data.get('cnh', '') is string
+        && data.get('phone', '') is string
+        && (data.role != 'driver' || (data.keys().hasAll(['phone', 'cnh']) && data.phone != '' && data.cnh != ''))
+        && data.get('active', false) is bool
+        && data.get('createdAt', request.time) is timestamp
+        && data.get('updatedAt', request.time) is timestamp;
+    }
+
+    match /users/{userId} {
+      allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin() || (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.active == true));
+      
+      allow create: if isSignedIn() && isValidId(userId) && isValidUser(incoming()) && (
+        (request.auth.uid == userId && incoming().role in ['passenger', 'driver'] && (!('active' in incoming()) || incoming().active == false || incoming().role == 'passenger')) ||
+        isAdmin()
+      );
+
+      allow update: if isSignedIn() && isValidUser(incoming()) && (
+        isAdmin() ||
+        (request.auth.uid == userId && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'avatar', 'updatedAt']))
+      );
+      allow delete: if true;
+    }
+
+    function isValidRide(data) {
+      return data.keys().hasAll(['passengerId', 'from', 'to', 'price', 'status', 'date', 'shared'])
+        && data.passengerId is string && data.passengerId.size() <= 128
+        && data.get('driverId', '') is string
+        && data.from is string && data.from.size() <= 100
+        && data.to is string && data.to.size() <= 100
+        && data.price is number
+        && data.status is string && data.status in ['pending', 'accepted', 'in_progress', 'completed', 'cancelled']
+        && data.date is string && data.date.size() <= 50
+        && data.shared is bool
+        && data.get('createdAt', request.time) is timestamp
+        && data.get('updatedAt', request.time) is timestamp;
+    }
+
+    match /rides/{rideId} {
+      allow read: if true; allow delete: if true;
+
+      allow create: if isSignedIn() && isValidId(rideId)
+        && isValidRide(incoming())
+        && incoming().passengerId == request.auth.uid
+        && incoming().status == 'pending';
+
+      allow update: if isSignedIn() && isValidRide(incoming()) && (
+        isAdmin() ||
+        (request.auth.uid == existing().passengerId && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt']) && incoming().status == 'cancelled') ||
+        (incoming().diff(existing()).affectedKeys().hasOnly(['driverId', 'status', 'updatedAt']) && existing().status == 'pending' && incoming().status == 'accepted' && incoming().driverId == request.auth.uid) ||
+        (request.auth.uid == existing().driverId && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt']) && incoming().status in ['in_progress', 'completed', 'cancelled']) ||
+        (incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt']) && existing().status == 'pending' && incoming().status == 'cancelled')
+      );
+    }
+
+    function isValidMessage(data) {
+      return data.keys().hasAll(['rideId', 'senderId', 'timestamp'])
+        && data.rideId is string && data.rideId.size() <= 128
+        && data.senderId is string && data.senderId.size() <= 128
+        && data.get('text', '') is string && data.get('text', '').size() <= 1000
+        && data.get('imageUrl', '') is string
+        && data.timestamp == request.time;
+    }
+
+    match /rides/{rideId}/messages/{messageId} {
+      allow read: if isSignedIn() && (
+        isAdmin() ||
+        request.auth.uid == get(/databases/$(database)/documents/rides/$(rideId)).data.passengerId ||
+        request.auth.uid == get(/databases/$(database)/documents/rides/$(rideId)).data.driverId
+      );
+
+      allow create: if isSignedIn() && isValidId(messageId)
+        && isValidMessage(incoming())
+        && incoming().rideId == rideId
+        && incoming().senderId == request.auth.uid
+        && (
+          request.auth.uid == get(/databases/$(database)/documents/rides/$(rideId)).data.passengerId ||
+          request.auth.uid == get(/databases/$(database)/documents/rides/$(rideId)).data.driverId
+        );
+    }
+  }
+}

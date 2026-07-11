@@ -1,0 +1,42 @@
+{
+  "name": "ai-studio-applet",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+<<<<<<< HEAD
+    "build": "NODE_ENV=production next build && mv out dist",
+=======
+    "build": "NODE_ENV=production next build && rm -rf dist && cp -r out dist",
+>>>>>>> 5f44078 (Atualiza rotas separadas para admin, motorista e passageiro)
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "@google/genai": "^2.4.0",
+    "@hookform/resolvers": "^5.2.1",
+    "autoprefixer": "^10.4.21",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "date-fns": "^4.1.0",
+    "firebase": "^10.14.1",
+    "firebase-admin": "^14.1.0",
+    "lucide-react": "^0.475.0",
+    "motion": "^11.11.0",
+    "next": "14.2.15",
+    "postcss": "^8.4.31",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "recharts": "^2.13.0",
+    "tailwind-merge": "^2.5.4"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.2",
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "eslint": "8.57.1",
+    "eslint-config-next": "14.2.15",
+    "tailwindcss": "^4.3.2",
+    "typescript": "5.6.3"
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "name": "move-CMD",
+  "description": "Aplicativo de transporte intermunicipal entre Belo Horizonte e Conceição do Mato Dentro (MG).",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

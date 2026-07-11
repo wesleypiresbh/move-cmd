@@ -1,0 +1,68 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile containing role, identity info, and active status.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "role": { "type": "string", "enum": ["passenger", "driver", "admin", "operator"] },
+        "rating": { "type": "number" },
+        "avatar": { "type": "string" },
+        "ridesCompleted": { "type": "number" },
+        "cpf": { "type": "string" },
+        "cnh": { "type": "string" },
+        "email": { "type": "string" },
+        "active": { "type": "boolean" },
+        "createdAt": { "type": "number" },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["name", "role", "email"]
+    },
+    "Ride": {
+      "title": "Ride",
+      "description": "A ride request or trip.",
+      "type": "object",
+      "properties": {
+        "passengerId": { "type": "string" },
+        "driverId": { "type": "string" },
+        "from": { "type": "string" },
+        "to": { "type": "string" },
+        "price": { "type": "number" },
+        "status": { "type": "string", "enum": ["pending", "accepted", "in_progress", "completed", "cancelled"] },
+        "date": { "type": "string" },
+        "shared": { "type": "boolean" },
+        "createdAt": { "type": "number" },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["passengerId", "from", "to", "price", "status", "date", "shared"]
+    },
+    "Message": {
+      "title": "Message",
+      "description": "A chat message related to a ride.",
+      "type": "object",
+      "properties": {
+        "rideId": { "type": "string" },
+        "senderId": { "type": "string" },
+        "text": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "timestamp": { "type": "number" }
+      },
+      "required": ["rideId", "senderId", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "User profiles. Accessible by the user themselves and admins."
+    },
+    "/rides/{rideId}": {
+      "schema": { "$ref": "#/entities/Ride" },
+      "description": "All rides in the system."
+    },
+    "/rides/{rideId}/messages/{messageId}": {
+      "schema": { "$ref": "#/entities/Message" },
+      "description": "Messages exchanged for a specific ride."
+    }
+  }
+}
