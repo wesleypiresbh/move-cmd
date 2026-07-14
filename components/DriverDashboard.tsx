@@ -20,7 +20,7 @@ const CHART_DATA = [
 ];
 
 export default function DriverDashboard() {
-  const { currentUser, rides, users, updateRideStatus, loading } = useAppStore();
+  const { currentUser, rides, users, updateRideStatus, loading, addMessage } = useAppStore();
     
   
 
@@ -104,6 +104,15 @@ export default function DriverDashboard() {
             lng: position.coords.longitude
           });
           setLocationLoading(false);
+
+          if (activeRide && currentUser) {
+            addMessage({
+              rideId: activeRide.id,
+              senderId: currentUser.id,
+              text: `📍 Minha localização atual: https://www.google.com/maps/search/?api=1&query=${position.coords.latitude},${position.coords.longitude}`
+            });
+            alert("Sua localização foi compartilhada no chat!");
+          }
         },
         (error) => {
           console.error("Erro ao obter localização", error);

@@ -53,7 +53,22 @@ export default function Chat({ rideId, currentUserId }: { rideId: string, curren
             return (
               <div key={msg.id} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
                 <div className={`max-w-[85%] rounded-2xl px-4 py-3 shadow-sm ${isMe ? 'bg-orange-600 text-white rounded-br-sm' : 'bg-white border border-slate-100 rounded-bl-sm text-slate-900'}`}>
-                  {msg.text && <p className="text-sm font-medium">{msg.text}</p>}
+                  {msg.text && (
+                    <p className="text-sm font-medium">
+                      {msg.text.includes('https://') ? (
+                        <a 
+                          href={msg.text.match(/https:\/\/[^ ]+/)?.[0] || '#'} 
+                          target="_blank" 
+                          rel="noopener noreferrer" 
+                          className={`underline break-all ${isMe ? 'text-blue-100 hover:text-white' : 'text-blue-600 hover:text-blue-800'}`}
+                        >
+                          {msg.text}
+                        </a>
+                      ) : (
+                        msg.text
+                      )}
+                    </p>
+                  )}
                   {msg.imageUrl && (
                     <>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
