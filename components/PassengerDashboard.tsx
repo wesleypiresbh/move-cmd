@@ -39,13 +39,18 @@ export default function PassengerDashboard() {
 
   const myRides = rides.filter(r => currentUser && r.passengerId === currentUser.id);
   const activeRide = myRides.find(r => r.status === 'pending' || r.status === 'accepted' || r.status === 'in_progress');
+  const isLocationRequired = activeRide?.status === 'accepted' && !userLocation;
 
   const previousStatusRef = React.useRef(activeRide?.status);
+  const locationButtonRef = React.useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (previousStatusRef.current !== 'accepted' && activeRide?.status === 'accepted') {
-      alert('Seu embarque foi autorizado pelo motorista! Verifique os detalhes na tela Viagem Atual.');
-      setActiveTab('active');
+      alert('Sua viagem foi aceita pelo motorista! Por favor, compartilhe sua localização exata para que ele possa te buscar.');
+      setActiveTab('book');
+      setTimeout(() => {
+        locationButtonRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 300);
     }
     previousStatusRef.current = activeRide?.status;
   }, [activeRide?.status]);
@@ -145,62 +150,29 @@ export default function PassengerDashboard() {
         {activeTab === 'book' && (
           <div className="space-y-6">
             {activeRide ? (
-              <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                <div className="flex justify-between items-center mb-4">
-                  <div className="flex items-center gap-3">
-                    <h3 className="font-bold text-slate-900 text-lg">Rota Ativa</h3>
-                    <span className="px-2 py-0.5 text-[10px] rounded bg-orange-50 text-orange-600 font-bold uppercase tracking-wider border border-orange-100">
-                      {activeRide.shared ? 'Compartilhada' : 'Exclusiva'}
-                    </span>
+              isLocationRequired ? (
+                <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col items-center text-center space-y-6">
+                  <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center animate-bounce mt-4 shadow-sm border border-blue-100">
+                    <Navigation2 className="w-8 h-8 rotate-45" />
                   </div>
-                  <span className="px-3 py-1 text-[10px] rounded-full bg-slate-100 text-slate-600 font-bold tracking-wider uppercase border border-slate-200">
-                    {getStatusLabel(activeRide.status)}
-                  </span>
-                </div>
-                {!activeRide.shared && activeRide.date && (
-                  <div className="mb-6 flex items-center gap-3 bg-indigo-50 p-4 rounded-xl border border-indigo-100">
-                    <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600">
-                      <Clock className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider">Viagem Agendada Para</p>
-                      <p suppressHydrationWarning className="text-sm font-bold text-indigo-900">
-                        {!isNaN(new Date(activeRide.date).getTime()) ? format(new Date(activeRide.date), "dd/MM/yy 'às' HH:mm") : '--/--'}
-                      </p>
-                    </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-slate-900">Localização Requerida</h3>
+                    <p className="text-sm text-slate-500 mt-2 max-w-xs mx-auto">
+                      O motorista aceitou sua viagem! Por favor, compartilhe sua localização atual para que ele possa ir até você.
+                    </p>
                   </div>
-                )}
-                <div className="relative h-32 bg-slate-50 rounded-xl overflow-hidden border border-slate-200 flex items-center justify-center mb-6 px-4">
-                  <div className="absolute left-[20px] top-6 bottom-6 w-0.5 bg-slate-300"></div>
-                  <div className="w-full space-y-6 relative z-10 pl-2">
-                     <div className="flex items-center gap-4">
-                        <div className="w-3 h-3 rounded-full bg-orange-600 outline outline-4 outline-white"></div>
-                        <div>
-                          <p className="text-sm font-bold text-slate-900">{activeRide.from}</p>
-                          <p className="text-[10px] text-slate-400 uppercase tracking-wider">Partida</p>
-                        </div>
-                     </div>
-                     <div className="flex items-center gap-4">
-                        <div className="w-3 h-3 rounded-full bg-emerald-500 outline outline-4 outline-white shadow-sm"></div>
-                        <div>
-                          <p className="text-sm font-bold text-slate-900">{activeRide.to}</p>
-                          <p className="text-[10px] text-slate-400 uppercase tracking-wider">Destino</p>
-                        </div>
-                     </div>
-                  </div>
-                </div>
-                
-                <div className="pt-2 flex flex-col items-center gap-3">
+                  
                   <button
+                    ref={locationButtonRef}
                     onClick={handleRequestLocation}
                     disabled={locationLoading}
-                    className={`flex items-center gap-2 text-xs font-bold px-4 py-2 rounded-full border transition-colors ${userLocation ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'}`}
+                    className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold hover:bg-blue-700 transition-all duration-300 shadow-md flex items-center justify-center gap-2 ring-4 ring-blue-100 animate-pulse text-xs uppercase tracking-wider"
                   >
-                    <Navigation2 className="w-3.5 h-3.5" />
-                    {locationLoading ? 'Localizando...' : userLocation ? 'Localização Ativa' : 'Compartilhar Minha Localização'}
+                    <Navigation2 className="w-4 h-4" />
+                    {locationLoading ? 'Localizando...' : 'Compartilhar Minha Localização'}
                   </button>
 
-                  {(activeRide.status === 'pending' || activeRide.status === 'accepted') && (
+                  <div className="pt-2">
                     <button
                       onClick={() => {
                         if (window.confirm('Tem certeza que deseja cancelar esta viagem?')) {
@@ -209,17 +181,88 @@ export default function PassengerDashboard() {
                       }}
                       className="text-xs font-bold text-red-500 hover:text-red-700 transition-colors"
                     >
-                      Cancelar Viagem Agendada
+                      Cancelar Viagem
                     </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                  <div className="flex justify-between items-center mb-4">
+                    <div className="flex items-center gap-3">
+                      <h3 className="font-bold text-slate-900 text-lg">Rota Ativa</h3>
+                      <span className="px-2 py-0.5 text-[10px] rounded bg-orange-50 text-orange-600 font-bold uppercase tracking-wider border border-orange-100">
+                        {activeRide.shared ? 'Compartilhada' : 'Exclusiva'}
+                      </span>
+                    </div>
+                    <span className="px-3 py-1 text-[10px] rounded-full bg-slate-100 text-slate-600 font-bold tracking-wider uppercase border border-slate-200">
+                      {getStatusLabel(activeRide.status)}
+                    </span>
+                  </div>
+                  {!activeRide.shared && activeRide.date && (
+                    <div className="mb-6 flex items-center gap-3 bg-indigo-50 p-4 rounded-xl border border-indigo-100">
+                      <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600">
+                        <Clock className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider">Viagem Agendada Para</p>
+                        <p suppressHydrationWarning className="text-sm font-bold text-indigo-900">
+                          {!isNaN(new Date(activeRide.date).getTime()) ? format(new Date(activeRide.date), "dd/MM/yy 'às' HH:mm") : '--/--'}
+                        </p>
+                      </div>
+                    </div>
                   )}
-                </div>
+                  <div className="relative h-32 bg-slate-50 rounded-xl overflow-hidden border border-slate-200 flex items-center justify-center mb-6 px-4">
+                    <div className="absolute left-[20px] top-6 bottom-6 w-0.5 bg-slate-300"></div>
+                    <div className="w-full space-y-6 relative z-10 pl-2">
+                       <div className="flex items-center gap-4">
+                          <div className="w-3 h-3 rounded-full bg-orange-600 outline outline-4 outline-white"></div>
+                          <div>
+                            <p className="text-sm font-bold text-slate-900">{activeRide.from}</p>
+                            <p className="text-[10px] text-slate-400 uppercase tracking-wider">Partida</p>
+                          </div>
+                       </div>
+                       <div className="flex items-center gap-4">
+                          <div className="w-3 h-3 rounded-full bg-emerald-500 outline outline-4 outline-white shadow-sm"></div>
+                          <div>
+                            <p className="text-sm font-bold text-slate-900">{activeRide.to}</p>
+                            <p className="text-[10px] text-slate-400 uppercase tracking-wider">Destino</p>
+                          </div>
+                       </div>
+                    </div>
+                  </div>
+                  
+                  <div className="pt-2 flex flex-col items-center gap-3">
+                    <button
+                      ref={locationButtonRef}
+                      onClick={handleRequestLocation}
+                      disabled={locationLoading}
+                      className={`flex items-center gap-2 text-xs font-bold px-4 py-2 rounded-full border transition-all duration-500 ${userLocation ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : (activeRide?.status === 'accepted' ? 'bg-blue-600 text-white border-blue-600 shadow-md ring-4 ring-blue-100 hover:bg-blue-700 animate-pulse' : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100')}`}
+                    >
+                      <Navigation2 className="w-3.5 h-3.5" />
+                      {locationLoading ? 'Localizando...' : userLocation ? 'Localização Ativa' : 'Compartilhar Minha Localização'}
+                    </button>
 
-                {/* Chat Integration */}
-                <div className="border-t border-slate-100 pt-6">
-                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">Mensagens com Motorista</h4>
-                  <Chat rideId={activeRide.id} currentUserId={currentUser.id} />
+                    {(activeRide.status === 'pending' || activeRide.status === 'accepted') && (
+                      <button
+                        onClick={() => {
+                          if (window.confirm('Tem certeza que deseja cancelar esta viagem?')) {
+                            updateRideStatus(activeRide.id, 'cancelled').then(() => setIsBookingMode(false)).catch(e => { console.error(e); alert('Erro ao cancelar corrida.'); });
+                          }
+                        }}
+                        className="text-xs font-bold text-red-500 hover:text-red-700 transition-colors"
+                      >
+                        Cancelar Viagem Agendada
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Chat Integration */}
+                  <div className="border-t border-slate-100 pt-6">
+                    <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">Mensagens com Motorista</h4>
+                    <Chat rideId={activeRide.id} currentUserId={currentUser.id} />
+                  </div>
                 </div>
-              </div>
+              )
             ) : (
               !isBookingMode ? (
                 <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 flex flex-col items-center text-center space-y-6 mt-4">
