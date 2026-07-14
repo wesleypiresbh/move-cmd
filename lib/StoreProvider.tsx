@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import type { User, Ride, Message, Role, Location } from './types';
+import type { User, Ride, Message, Role, Location, Car } from './types';
 import { auth, db } from './firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { collection, doc, setDoc, getDoc, updateDoc, deleteDoc, onSnapshot, query, where, orderBy, serverTimestamp, getDocs } from 'firebase/firestore';
@@ -33,8 +33,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [currentRole, setCurrentRole] = useState<Role>('passenger'); // Fallback
 
-    useEffect(() => {
-    let unsubUserDoc;
+  useEffect(() => {
+    let unsubUserDoc: (() => void) | undefined;
     const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
       console.log('onAuthStateChanged', firebaseUser?.uid);
       if (unsubUserDoc) unsubUserDoc();
@@ -46,9 +46,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             setCurrentUser(userData);
             setCurrentRole(userData.role);
           } else {
-        setCurrentUser(null);
-        setLoading(false);
-      }
+            setCurrentUser(null);
+            setLoading(false);
+          }
           setLoading(false);
         }, (error) => {
           setLoading(false);
@@ -57,6 +57,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         });
       } else {
         setCurrentUser(null);
+        setLoading(false);
       }
     });
 
@@ -207,7 +208,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AppContext.Provider value={{ currentUser, setCurrentRole, users, toggleUserStatus, addUser, deleteUser, rides, addRide, updateRideStatus, messages, addMessage, loading }}>
+    <AppContext.Provider value={{ currentUser, setCurrentRole, users, toggleUserStatus, addUser, deleteUser, addCar, rides, addRide, updateRideStatus, messages, addMessage, loading }}>
       {children}
     </AppContext.Provider>
   );

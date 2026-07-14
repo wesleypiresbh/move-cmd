@@ -6,4 +6,6 @@ node_modules
 *.log
 npm-debug.log*
 node-compile-cache
-
+dist
+out
+*.tsbuildinfo

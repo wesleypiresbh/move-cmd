@@ -345,7 +345,6 @@ export default function DriverDashboard() {
             )}
           </div>
         )}
-        )}
 
         {activeTab === 'earnings' && (
           <div className="space-y-6">

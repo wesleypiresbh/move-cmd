@@ -2,9 +2,10 @@
 import React, { useState } from 'react';
 import { Logo } from './Logo';
 import type { Role } from '@/lib/types';
-import { auth } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { useAppStore } from '@/lib/StoreProvider';
+import { collection, query, where, getDocs, doc, setDoc } from 'firebase/firestore';
 
 interface LoginFormProps {
   type: 'admin' | 'motorista' | 'passageiro';
@@ -70,7 +71,7 @@ export function LoginForm({ type, onLogin }: LoginFormProps) {
             avatar: 'https://ui-avatars.com/api/?name=Master+Admin',
             active: true
           }, userCred.user.uid);
-        } catch (createErr) {
+        } catch (createErr: any) {
           console.error(createErr);
           setError('Erro ao criar conta admin: ' + createErr.message);
           setLoading(false);
@@ -149,14 +150,26 @@ export function LoginForm({ type, onLogin }: LoginFormProps) {
           return;
         }
       } else {
-        foundUser = users.find(u => u.email === email);
+        const usersRef = collection(db, 'users');
+        const q = query(usersRef, where('email', '==', email));
+        const querySnapshot = await getDocs(q);
+        if (!querySnapshot.empty) {
+          foundUser = querySnapshot.docs[0].data();
+        }
+
         if (foundUser && foundUser.active === false) {
           setError('Sua conta está pendente de aprovação por um administrador.');
           setLoading(false);
           return;
         }
         
-        await signInWithEmailAndPassword(auth, email, password);
+        const userCred = await signInWithEmailAndPassword(auth, email, password);
+        
+        // If the user has a firestore doc but auth was re-created with different uid somehow, this would fail the snapshot later.
+        if (foundUser && !querySnapshot.empty && querySnapshot.docs[0].id !== userCred.user.uid) {
+           // Fix it by writing the foundUser data to the correct auth uid document
+           await setDoc(doc(db, 'users', userCred.user.uid), foundUser);
+        }
       }
       
       if (type === 'admin') {
