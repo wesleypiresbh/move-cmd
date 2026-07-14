@@ -264,6 +264,81 @@ export default function DriverDashboard() {
           <div>
             {!activeRide ? (
               <div className="text-center text-gray-500 mt-10">Você não tem viagem em andamento.</div>
+            ) : passengerLocationUrl ? (
+              <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-6">
+                <div className="flex flex-col items-center text-center space-y-6">
+                  <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center animate-bounce mt-4 shadow-sm border border-blue-100">
+                    <Navigation className="w-8 h-8 rotate-45" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-slate-900">Localização Recebida!</h3>
+                    <p className="text-sm text-slate-500 mt-2 max-w-xs mx-auto">
+                      O passageiro compartilhou a localização atual dele. Clique abaixo para iniciar a rota no Google Maps.
+                    </p>
+                  </div>
+                  
+                  <a
+                    href={passengerLocationUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl transition-all duration-300 shadow-md flex items-center justify-center gap-2 ring-4 ring-blue-100 text-xs uppercase tracking-wider text-center"
+                  >
+                    <Navigation className="w-4 h-4 rotate-45" />
+                    Rotear no Google Maps
+                  </a>
+                </div>
+
+                <div className="border-t border-slate-100 pt-6">
+                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">Comunicação (Ponto)</h4>
+                  <Chat rideId={activeRide.id} currentUserId={currentUser.id} />
+                </div>
+
+                <div className="pt-2 flex gap-3">
+                  {activeRide.status === 'accepted' ? (
+                    <>
+                      <button 
+                        onClick={async () => {
+                          try {
+                            await updateRideStatus(activeRide.id, 'in_progress');
+                          } catch (err) {
+                            alert('Erro ao iniciar corrida.');
+                          }
+                        }}
+                        className="flex-1 bg-orange-600 text-white py-4 rounded-xl font-bold hover:bg-orange-700 transition-colors shadow-md text-xs uppercase tracking-wider"
+                      >
+                        Iniciar corrida
+                      </button>
+                      <button 
+                        onClick={async () => {
+                          if (window.confirm('Tem certeza que deseja sair desta corrida?')) {
+                            try {
+                              await updateRideStatus(activeRide.id, 'cancelled');
+                            } catch (err) {
+                              alert('Erro ao cancelar corrida.');
+                            }
+                          }
+                        }}
+                        className="flex-1 bg-red-100 text-red-600 py-4 rounded-xl font-bold hover:bg-red-200 transition-colors shadow-sm border border-red-200 text-xs uppercase tracking-wider"
+                      >
+                        Sair
+                      </button>
+                    </>
+                  ) : (
+                    <button 
+                      onClick={async () => {
+                        try {
+                          await updateRideStatus(activeRide.id, 'completed');
+                        } catch (err) {
+                          alert('Erro ao finalizar corrida.');
+                        }
+                      }}
+                      className="flex-1 bg-emerald-600 text-white py-4 rounded-xl font-bold hover:bg-emerald-700 transition-colors shadow-md text-xs uppercase tracking-wider"
+                    >
+                      Finalizar Viagem
+                    </button>
+                  )}
+                </div>
+              </div>
             ) : (
               <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-6">
                 <div className="flex justify-between items-center pb-6 border-b border-slate-100">
@@ -368,7 +443,7 @@ export default function DriverDashboard() {
                             alert('Erro ao iniciar corrida.');
                           }
                         }}
-                        className="flex-1 bg-orange-600 text-white py-4 rounded-xl font-bold hover:bg-orange-700 transition-colors shadow-md"
+                        className="flex-1 bg-orange-600 text-white py-4 rounded-xl font-bold hover:bg-orange-700 transition-colors shadow-md text-xs uppercase tracking-wider"
                       >
                         Iniciar corrida
                       </button>
@@ -382,7 +457,7 @@ export default function DriverDashboard() {
                             }
                           }
                         }}
-                        className="flex-1 bg-red-100 text-red-600 py-4 rounded-xl font-bold hover:bg-red-200 transition-colors shadow-sm border border-red-200"
+                        className="flex-1 bg-red-100 text-red-600 py-4 rounded-xl font-bold hover:bg-red-200 transition-colors shadow-sm border border-red-200 text-xs uppercase tracking-wider"
                       >
                         Sair
                       </button>
@@ -396,7 +471,7 @@ export default function DriverDashboard() {
                           alert('Erro ao finalizar corrida.');
                         }
                       }}
-                      className="flex-1 bg-emerald-600 text-white py-4 rounded-xl font-bold hover:bg-emerald-700 transition-colors shadow-md"
+                      className="flex-1 bg-emerald-600 text-white py-4 rounded-xl font-bold hover:bg-emerald-700 transition-colors shadow-md text-xs uppercase tracking-wider"
                     >
                       Finalizar Viagem
                     </button>
