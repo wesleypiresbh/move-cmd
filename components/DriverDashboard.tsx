@@ -6,6 +6,8 @@ import { MapPin, Users, Navigation, CheckCircle, XCircle, TrendingUp, Clock, Nav
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import Chat from './Chat';
+import { db } from '@/lib/firebase';
+import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import dynamic from 'next/dynamic';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
@@ -32,7 +34,37 @@ export default function DriverDashboard() {
   const activeRide = rides.find(r => currentUser && r.driverId === currentUser.id && (r.status === 'accepted' || r.status === 'in_progress'));
   const completedRides = rides.filter(r => currentUser && r.driverId === currentUser.id && r.status === 'completed');
   
+  const [passengerLocationUrl, setPassengerLocationUrl] = useState<string | null>(null);
   const prevPendingCountRef = useRef(pendingRides.length);
+
+  useEffect(() => {
+    if (!activeRide) {
+      setPassengerLocationUrl(null);
+      return;
+    }
+    const q = query(
+      collection(db, 'rides', activeRide.id, 'messages'),
+      orderBy('timestamp', 'asc')
+    );
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const locationMsg = snapshot.docs
+        .map(d => d.data())
+        .reverse()
+        .find(msg => msg.text && msg.text.includes('📍 Minha localização atual:'));
+      
+      if (locationMsg) {
+        const match = locationMsg.text.match(/https:\/\/[^ ]+/);
+        if (match) {
+          setPassengerLocationUrl(match[0]);
+        }
+      } else {
+        setPassengerLocationUrl(null);
+      }
+    }, (error) => {
+      console.error("Erro ao buscar localização do passageiro:", error);
+    });
+    return () => unsubscribe();
+  }, [activeRide?.id]);
 
   useEffect(() => {
     if (pendingRides.length > prevPendingCountRef.current) {
@@ -254,6 +286,26 @@ export default function DriverDashboard() {
                       <p className="text-sm font-bold text-slate-900">{users.find(u => u.id === activeRide.passengerId)?.name || 'Passageiro'}</p>
                     </div>
                   </div>
+
+                  {passengerLocationUrl && (
+                    <div className="bg-blue-50 border border-blue-200 p-4 rounded-xl flex flex-col gap-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-blue-600 animate-ping"></div>
+                        <p className="text-xs text-blue-800 font-bold">
+                          Localização compartilhada pelo passageiro!
+                        </p>
+                      </div>
+                      <a
+                        href={passengerLocationUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 px-4 rounded-xl transition-all duration-300 shadow-md shadow-blue-500/10 flex items-center justify-center gap-2 text-xs uppercase tracking-wider text-center"
+                      >
+                        <Navigation className="w-4 h-4 rotate-45" />
+                        Rotear no Google Maps
+                      </a>
+                    </div>
+                  )}
                   {!activeRide.shared && activeRide.date && (
                     <div className="flex items-center gap-3 bg-indigo-50 p-4 rounded-xl border border-indigo-100">
                       <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600">
