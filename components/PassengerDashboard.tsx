@@ -24,6 +24,7 @@ export default function PassengerDashboard() {
   const [locationLoading, setLocationLoading] = useState(false);
   const [isBookingMode, setIsBookingMode] = useState(false);
   const [scheduleDate, setScheduleDate] = useState<string>('');
+  const [showChat, setShowChat] = useState(false);
 
   
   const getStatusLabel = (status: string) => {
@@ -258,8 +259,17 @@ export default function PassengerDashboard() {
 
                   {/* Chat Integration */}
                   <div className="border-t border-slate-100 pt-6">
-                    <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">Mensagens com Motorista</h4>
-                    <Chat rideId={activeRide.id} currentUserId={currentUser.id} />
+                    <button
+                      onClick={() => setShowChat(!showChat)}
+                      className="w-full py-3 bg-slate-50 border border-slate-200 text-slate-600 rounded-xl font-bold hover:bg-slate-100 transition-colors flex items-center justify-center gap-2 text-xs uppercase tracking-wider"
+                    >
+                      <span>💬 {showChat ? 'Ocultar Mensagens' : 'Conversar com Motorista'}</span>
+                    </button>
+                    {showChat && (
+                      <div className="mt-4">
+                        <Chat rideId={activeRide.id} currentUserId={currentUser.id} />
+                      </div>
+                    )}
                   </div>
                 </div>
               )

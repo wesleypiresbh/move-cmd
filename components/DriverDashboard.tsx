@@ -35,6 +35,7 @@ export default function DriverDashboard() {
   const completedRides = rides.filter(r => currentUser && r.driverId === currentUser.id && r.status === 'completed');
   
   const [passengerLocationUrl, setPassengerLocationUrl] = useState<string | null>(null);
+  const [showChat, setShowChat] = useState(false);
   const prevPendingCountRef = useRef(pendingRides.length);
 
   useEffect(() => {
@@ -289,8 +290,17 @@ export default function DriverDashboard() {
                 </div>
 
                 <div className="border-t border-slate-100 pt-6">
-                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">Comunicação (Ponto)</h4>
-                  <Chat rideId={activeRide.id} currentUserId={currentUser.id} />
+                  <button
+                    onClick={() => setShowChat(!showChat)}
+                    className="w-full py-3 bg-slate-50 border border-slate-200 text-slate-600 rounded-xl font-bold hover:bg-slate-100 transition-colors flex items-center justify-center gap-2 text-xs uppercase tracking-wider"
+                  >
+                    <span>💬 {showChat ? 'Ocultar Mensagens' : 'Conversar com Passageiro'}</span>
+                  </button>
+                  {showChat && (
+                    <div className="mt-4">
+                      <Chat rideId={activeRide.id} currentUserId={currentUser.id} />
+                    </div>
+                  )}
                 </div>
 
                 <div className="pt-2 flex gap-3">
@@ -428,8 +438,17 @@ export default function DriverDashboard() {
                 </div>
 
                 <div className="border-t border-slate-100 pt-6">
-                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">Comunicação (Ponto)</h4>
-                  <Chat rideId={activeRide.id} currentUserId={currentUser.id} />
+                  <button
+                    onClick={() => setShowChat(!showChat)}
+                    className="w-full py-3 bg-slate-50 border border-slate-200 text-slate-600 rounded-xl font-bold hover:bg-slate-100 transition-colors flex items-center justify-center gap-2 text-xs uppercase tracking-wider"
+                  >
+                    <span>💬 {showChat ? 'Ocultar Mensagens' : 'Conversar com Passageiro'}</span>
+                  </button>
+                  {showChat && (
+                    <div className="mt-4">
+                      <Chat rideId={activeRide.id} currentUserId={currentUser.id} />
+                    </div>
+                  )}
                 </div>
 
                 <div className="pt-2 flex gap-3">
