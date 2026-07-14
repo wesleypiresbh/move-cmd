@@ -188,17 +188,32 @@ export default function PassengerDashboard() {
                 </div>
               ) : (
                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                  <div className="flex justify-between items-center mb-4">
-                    <div className="flex items-center gap-3">
-                      <h3 className="font-bold text-slate-900 text-lg">Rota Ativa</h3>
-                      <span className="px-2 py-0.5 text-[10px] rounded bg-orange-50 text-orange-600 font-bold uppercase tracking-wider border border-orange-100">
+                  {activeRide.status === 'in_progress' ? (
+                    <div className="flex flex-col items-start gap-1 mb-6 pb-4 border-b border-slate-100">
+                      <span className="text-sm font-semibold text-blue-600 uppercase tracking-wider">
+                        Rota Ativa
+                      </span>
+                      <span className="text-xl font-extrabold text-blue-800">
                         {activeRide.shared ? 'Compartilhada' : 'Exclusiva'}
                       </span>
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-600 border border-blue-200 mt-1.5 uppercase tracking-wider animate-pulse">
+                        <span className="w-2 h-2 rounded-full bg-blue-600 animate-ping"></span>
+                        Em Andamento
+                      </span>
                     </div>
-                    <span className="px-3 py-1 text-[10px] rounded-full bg-slate-100 text-slate-600 font-bold tracking-wider uppercase border border-slate-200">
-                      {getStatusLabel(activeRide.status)}
-                    </span>
-                  </div>
+                  ) : (
+                    <div className="flex justify-between items-center mb-4">
+                      <div className="flex items-center gap-3">
+                        <h3 className="font-bold text-slate-900 text-lg">Rota Ativa</h3>
+                        <span className="px-2 py-0.5 text-[10px] rounded bg-orange-50 text-orange-600 font-bold uppercase tracking-wider border border-orange-100">
+                          {activeRide.shared ? 'Compartilhada' : 'Exclusiva'}
+                        </span>
+                      </div>
+                      <span className="px-3 py-1 text-[10px] rounded-full bg-slate-100 text-slate-600 font-bold tracking-wider uppercase border border-slate-200">
+                        {getStatusLabel(activeRide.status)}
+                      </span>
+                    </div>
+                  )}
                   {!activeRide.shared && activeRide.date && (
                     <div className="mb-6 flex items-center gap-3 bg-indigo-50 p-4 rounded-xl border border-indigo-100">
                       <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600">
