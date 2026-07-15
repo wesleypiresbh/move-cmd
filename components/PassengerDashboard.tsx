@@ -115,7 +115,7 @@ export default function PassengerDashboard() {
   };
 
   return (
-    <div className="max-w-md w-full mx-auto h-full flex flex-col bg-[#F8FAFC]">
+    <div className="max-w-md w-full mx-auto h-full flex flex-col bg-[#F8FAFC] relative overflow-hidden">
       {/* Header */}
       <div className="bg-white px-6 py-4 border-b border-slate-200 flex items-center justify-between">
         <div>
@@ -150,7 +150,7 @@ export default function PassengerDashboard() {
       <div className="flex-1 overflow-y-auto p-4">
         {activeTab === 'book' && (
           <div className="space-y-6">
-            {activeRide ? (
+            {activeRide && activeRide.status !== 'pending' ? (
               isLocationRequired ? (
                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col items-center text-center space-y-6">
                   <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center animate-bounce mt-4 shadow-sm border border-blue-100">
@@ -273,7 +273,7 @@ export default function PassengerDashboard() {
                       {locationLoading ? 'Localizando...' : userLocation ? 'Localização Ativa' : 'Compartilhar Minha Localização'}
                     </button>
 
-                    {(activeRide.status === 'pending' || activeRide.status === 'accepted') && (
+                    {activeRide.status === 'accepted' && (
                       <button
                         onClick={() => {
                           if (window.confirm('Tem certeza que deseja cancelar esta viagem?')) {
@@ -449,6 +449,69 @@ export default function PassengerDashboard() {
             ))}
           </div>
         )}
+      </div>
+
+      {/* Backdrop overlay when pending */}
+      {activeRide?.status === 'pending' && (
+        <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px] z-40 transition-opacity duration-300"></div>
+      )}
+
+      {/* Sliding Bottom Sheet for "Aguardando Motorista" */}
+      <div 
+        className={`absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-[0_-8px_30px_rgb(0,0,0,0.12)] border-t border-slate-100 p-6 transition-transform duration-500 ease-out z-50 transform ${
+          activeRide?.status === 'pending' ? 'translate-y-0' : 'translate-y-full'
+        }`}
+      >
+        <div className="w-12 h-1 bg-slate-200 rounded-full mx-auto mb-6"></div>
+        
+        <div className="flex flex-col items-center text-center space-y-6">
+          {/* Radar animation */}
+          <div className="relative flex items-center justify-center h-28 w-28">
+            <div className="absolute w-24 h-24 rounded-full border-2 border-orange-500/20 animate-ping" style={{ animationDuration: '3s', animationDelay: '0s' }}></div>
+            <div className="absolute w-18 h-18 rounded-full border-2 border-orange-500/25 animate-ping" style={{ animationDuration: '3s', animationDelay: '1.5s' }}></div>
+            <div className="absolute w-20 h-20 rounded-full bg-orange-50 flex items-center justify-center border border-orange-100">
+              <Car className="w-10 h-10 text-orange-600 animate-pulse" />
+            </div>
+          </div>
+          
+          <div className="space-y-2">
+            <h3 className="text-xl font-extrabold text-slate-900 tracking-tight">Aguardando Motorista</h3>
+            <p className="text-xs text-slate-500 font-medium max-w-[250px] mx-auto">
+              Estamos procurando um motorista próximo para realizar a sua viagem.
+            </p>
+          </div>
+          
+          {/* Ride Details Card */}
+          <div className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 text-left space-y-3">
+            <div className="flex justify-between items-center pb-2.5 border-b border-slate-200/60">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Valor Estimado</span>
+              <span className="text-lg font-bold text-slate-900">R$ {activeRide?.price.toFixed(2)}</span>
+            </div>
+            
+            <div className="space-y-3 pt-1">
+              <div className="flex items-center gap-2.5 text-xs font-bold text-slate-700">
+                <div className="w-2 h-2 rounded-full bg-orange-600 outline outline-2 outline-white shrink-0"></div>
+                <span className="truncate">{activeRide?.from}</span>
+              </div>
+              <div className="flex items-center gap-2.5 text-xs font-bold text-slate-700">
+                <div className="w-2 h-2 rounded-full bg-emerald-500 outline outline-2 outline-white shrink-0"></div>
+                <span className="truncate">{activeRide?.to}</span>
+              </div>
+            </div>
+          </div>
+          
+          {/* Cancel button */}
+          <button
+            onClick={() => {
+              if (window.confirm('Tem certeza que deseja cancelar a solicitação?')) {
+                updateRideStatus(activeRide!.id, 'cancelled').then(() => setIsBookingMode(false)).catch(e => { console.error(e); alert('Erro ao cancelar.'); });
+              }
+            }}
+            className="w-full bg-slate-100 hover:bg-red-50 hover:text-red-600 text-slate-600 py-3.5 rounded-xl font-bold uppercase tracking-wider text-xs transition-colors cursor-pointer border border-slate-200 hover:border-red-200"
+          >
+            Cancelar Solicitação
+          </button>
+        </div>
       </div>
     </div>
   );
