@@ -7,13 +7,25 @@ import { LoginForm } from '@/components/LoginForm';
 import { ShieldCheck, Users, CarTaxiFront, Wallet } from 'lucide-react';
 
 function AdminContent() {
-  const { setCurrentRole } = useAppStore();
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const { currentUser, loading } = useAppStore();
 
-  if (isLoggedIn) {
+  if (loading) {
+    return (
+      <div className="p-8 text-center flex flex-col items-center justify-center h-screen bg-slate-50 font-sans">
+        <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+        <p className="text-slate-500 font-medium">Carregando...</p>
+      </div>
+    );
+  }
+
+  if (currentUser && (currentUser.role === 'admin' || currentUser.role === 'operator')) {
     return (
       <div className="flex h-screen bg-slate-100">
-        <AdminDashboard onLogout={() => setIsLoggedIn(false)} />
+        <AdminDashboard onLogout={async () => {
+          const { signOut } = await import('firebase/auth');
+          const { auth } = await import('@/lib/firebase');
+          await signOut(auth);
+        }} />
       </div>
     );
   }
@@ -118,10 +130,7 @@ function AdminContent() {
 
             <LoginForm
               type="admin"
-              onLogin={(role) => {
-                setCurrentRole(role);
-                setIsLoggedIn(true);
-              }}
+              onLogin={() => {}}
             />
 
           </div>
