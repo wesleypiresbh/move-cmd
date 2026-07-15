@@ -260,7 +260,7 @@ export default function DriverDashboard() {
                   </div>
                   <h3 className="text-lg font-extrabold text-slate-900 tracking-tight mt-1">Aguardando Novas Corridas</h3>
                   <p className="text-slate-500 text-sm">
-                    O sistema está monitorando passageiros na rota intermunicipal. Você receberá um aviso sonoro quando houver novas solicitações.
+                    Monitorando Novas Solicitações.
                   </p>
                 </div>
 
