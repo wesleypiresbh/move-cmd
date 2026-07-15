@@ -503,13 +503,13 @@ export default function PassengerDashboard() {
           {/* Cancel button */}
           <button
             onClick={() => {
-              if (window.confirm('Tem certeza que deseja cancelar a solicitação?')) {
+              if (window.confirm('Tem certeza que deseja cancelar esta viagem?')) {
                 updateRideStatus(activeRide!.id, 'cancelled').then(() => setIsBookingMode(false)).catch(e => { console.error(e); alert('Erro ao cancelar.'); });
               }
             }}
-            className="w-full bg-slate-100 hover:bg-red-50 hover:text-red-600 text-slate-600 py-3.5 rounded-xl font-bold uppercase tracking-wider text-xs transition-colors cursor-pointer border border-slate-200 hover:border-red-200"
+            className="w-full bg-red-50 hover:bg-red-100 text-red-600 py-3.5 rounded-xl font-bold uppercase tracking-wider text-xs transition-colors cursor-pointer border border-red-200 shadow-sm"
           >
-            Cancelar Solicitação
+            Cancelar
           </button>
         </div>
       </div>
