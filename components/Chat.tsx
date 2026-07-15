@@ -4,17 +4,45 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useAppStore } from '@/lib/StoreProvider';
 import { Send, Image as ImageIcon } from 'lucide-react';
 import { format } from 'date-fns';
+import { db } from '@/lib/firebase';
+import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
+import type { Message } from '@/lib/types';
 
 export default function Chat({ rideId, currentUserId }: { rideId: string, currentUserId: string }) {
-  const { messages, addMessage } = useAppStore();
+  const { addMessage } = useAppStore();
+  const [messages, setMessages] = useState<Message[]>([]);
   const [text, setText] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const rideMessages = messages.filter(m => m.rideId === rideId);
+  useEffect(() => {
+    const q = query(
+      collection(db, 'rides', rideId, 'messages'),
+      orderBy('timestamp', 'asc')
+    );
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const msgs = snapshot.docs.map(d => {
+        const data = d.data();
+        return {
+          id: d.id,
+          rideId,
+          senderId: data.senderId,
+          text: data.text,
+          imageUrl: data.imageUrl,
+          timestamp: data.timestamp?.toDate 
+            ? data.timestamp.toDate().toISOString() 
+            : (typeof data.timestamp === 'string' ? data.timestamp : new Date().toISOString())
+        } as Message;
+      });
+      setMessages(msgs);
+    }, (error) => {
+      console.error("Error listening to messages:", error);
+    });
+    return () => unsubscribe();
+  }, [rideId]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [rideMessages]);
+  }, [messages]);
 
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,7 +67,7 @@ export default function Chat({ rideId, currentUserId }: { rideId: string, curren
   return (
     <div className="flex flex-col h-72 border border-slate-200 rounded-2xl overflow-hidden bg-[#F8FAFC]">
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {rideMessages.length === 0 ? (
+        {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center px-4">
             <div className="w-12 h-12 bg-orange-50 rounded-full flex items-center justify-center mb-3">
               <Send className="w-5 h-5 text-orange-400" />
@@ -48,7 +76,7 @@ export default function Chat({ rideId, currentUserId }: { rideId: string, curren
             <p className="text-[10px] text-slate-400 mt-1">Inicie o chat para combinar o ponto.</p>
           </div>
         ) : (
-          rideMessages.map(msg => {
+          messages.map(msg => {
             const isMe = msg.senderId === currentUserId;
             return (
               <div key={msg.id} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>

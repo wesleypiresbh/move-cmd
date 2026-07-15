@@ -185,6 +185,21 @@ export default function PassengerDashboard() {
                       Cancelar Viagem
                     </button>
                   </div>
+
+                  {/* Chat Integration */}
+                  <div className="w-full border-t border-slate-100 pt-6">
+                    <button
+                      onClick={() => setShowChat(!showChat)}
+                      className="w-full py-3 bg-slate-50 border border-slate-200 text-slate-600 rounded-xl font-bold hover:bg-slate-100 transition-colors flex items-center justify-center gap-2 text-xs uppercase tracking-wider"
+                    >
+                      <span>💬 {showChat ? 'Ocultar Mensagens' : 'Conversar com Motorista'}</span>
+                    </button>
+                    {showChat && (
+                      <div className="mt-4 text-left w-full">
+                        <Chat rideId={activeRide.id} currentUserId={currentUser.id} />
+                      </div>
+                    )}
+                  </div>
                 </div>
               ) : (
                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">

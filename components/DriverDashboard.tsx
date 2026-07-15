@@ -29,15 +29,53 @@ export default function DriverDashboard() {
   
   const [activeTab, setActiveTab] = useState<'requests' | 'active' | 'earnings'>('requests');
   const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
-  const [locationLoading, setLocationLoading] = useState(false);  const [rejectedRides, setRejectedRides] = useState<string[]>([]);
+  const [locationLoading, setLocationLoading] = useState(false);
+  const [rejectedRides, setRejectedRides] = useState<string[]>([]);
   const [isOnline, setIsOnline] = useState(true);
-  const pendingRides = rides.filter(r => r.status === 'pending' && !rejectedRides.includes(r.id));
-  const activeRide = rides.find(r => currentUser && r.driverId === currentUser.id && (r.status === 'accepted' || r.status === 'in_progress'));
+  const [expandedRideId, setExpandedRideId] = useState<string | null>(null);
+
+  const activeRides = rides.filter(r => currentUser && r.driverId === currentUser.id && (r.status === 'accepted' || r.status === 'in_progress'));
+  const hasActiveExclusive = activeRides.some(r => !r.shared);
+  const activeSharedCount = activeRides.filter(r => r.shared).length;
+  const isFullyBlocked = hasActiveExclusive || activeSharedCount >= 3;
+
+  const pendingRides = isFullyBlocked ? [] : rides.filter(r => {
+    if (r.status !== 'pending' || rejectedRides.includes(r.id)) return false;
+    // Se o motorista tem viagens compartilhadas ativas, ele não pode aceitar viagens exclusivas
+    if (activeSharedCount > 0 && !r.shared) return false;
+    return true;
+  });
+
+  const activeRide = activeRides.find(r => r.id === expandedRideId) || activeRides[0];
   const completedRides = rides.filter(r => currentUser && r.driverId === currentUser.id && r.status === 'completed');
   
   const [passengerLocationUrl, setPassengerLocationUrl] = useState<string | null>(null);
   const [showChat, setShowChat] = useState(false);
   const prevPendingCountRef = useRef(pendingRides.length);
+
+  const handleAcceptRide = async (rideId: string, shared: boolean) => {
+    if (hasActiveExclusive) {
+      alert("Você não pode aceitar corridas enquanto estiver em uma Viagem Exclusiva.");
+      return;
+    }
+    if (shared && activeSharedCount >= 3) {
+      alert("Você já atingiu o limite de 3 vagas para viagens compartilhadas.");
+      return;
+    }
+    if (!shared && activeSharedCount > 0) {
+      alert("Você não pode aceitar uma viagem exclusiva enquanto tiver viagens compartilhadas em andamento.");
+      return;
+    }
+
+    try {
+      await updateRideStatus(rideId, 'accepted');
+      setExpandedRideId(rideId);
+      setActiveTab('active');
+    } catch (error) {
+      console.error(error);
+      alert('Erro ao aceitar viagem. Esta corrida pode já ter sido aceita por outro motorista ou cancelada.');
+    }
+  };
 
   useEffect(() => {
     if (!activeRide) {
@@ -231,6 +269,28 @@ export default function DriverDashboard() {
                   Ficar Online
                 </button>
               </div>
+            ) : isFullyBlocked ? (
+              <div className="flex flex-col items-center justify-center p-6 bg-white rounded-2xl border border-slate-200 shadow-sm mt-2 text-center min-h-[400px]">
+                {/* Blocked Visual */}
+                <div className="relative flex items-center justify-center my-6 h-40 w-40">
+                  <div className="absolute w-32 h-32 rounded-full bg-slate-50 border border-slate-200/60" />
+                  <div className="relative z-10 w-16 h-16 bg-amber-500 text-white rounded-full flex items-center justify-center shadow-md">
+                    <XCircle className="w-8 h-8" />
+                  </div>
+                </div>
+
+                <div className="space-y-2 max-w-sm">
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                    RECEBIMENTO BLOQUEADO
+                  </div>
+                  <h3 className="text-lg font-extrabold text-slate-900 tracking-tight mt-1">Bloqueado para Novas Corridas</h3>
+                  <p className="text-slate-500 text-sm">
+                    {hasActiveExclusive 
+                      ? "Você possui uma Viagem Exclusiva em andamento." 
+                      : "Você atingiu o limite de vagas para Viagens Compartilhadas (3 vagas ocupadas)."}
+                  </p>
+                </div>
+              </div>
             ) : pendingRides.length === 0 ? (
               <div className="flex flex-col items-center justify-center p-6 bg-white rounded-2xl border border-slate-200 shadow-sm mt-2 text-center min-h-[400px]">
                 {/* Sonar Radar Visual */}
@@ -336,15 +396,7 @@ export default function DriverDashboard() {
                       <XCircle className="w-4 h-4" /> Recusar
                     </button>
                     <button 
-                      onClick={async () => {
-                        try {
-                          await updateRideStatus(ride.id, 'accepted');
-                          setActiveTab('active');
-                        } catch (error) {
-                          console.error(error);
-                          alert('Erro ao aceitar viagem. Esta corrida pode já ter sido aceita por outro motorista ou cancelada.');
-                        }
-                      }}
+                      onClick={() => handleAcceptRide(ride.id, ride.shared)}
                       className="flex-1 bg-blue-600 text-white py-3.5 rounded-xl font-bold hover:bg-blue-700 transition-colors shadow-md flex items-center justify-center gap-2 cursor-pointer"
                     >
                       <CheckCircle className="w-4 h-4" /> Aceitar
@@ -357,8 +409,8 @@ export default function DriverDashboard() {
         )}
 
         {activeTab === 'active' && (
-          <div>
-            {!activeRide ? (
+          <div className="space-y-4">
+            {activeRides.length === 0 ? (
               <div className="flex flex-col items-center justify-center p-6 bg-white rounded-2xl border border-slate-200 shadow-sm mt-2 text-center min-h-[350px]">
                 <div className="w-16 h-16 bg-slate-50 text-slate-400 rounded-full flex items-center justify-center mb-4 border border-slate-100">
                   <Navigation className="w-8 h-8 rotate-45 opacity-40" />
@@ -374,237 +426,183 @@ export default function DriverDashboard() {
                   Ver Solicitações
                 </button>
               </div>
-            ) : passengerLocationUrl ? (
-              <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-6">
-                <div className="flex flex-col items-center text-center space-y-6">
-                  <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center animate-bounce mt-4 shadow-sm border border-blue-100">
-                    <Navigation className="w-8 h-8 rotate-45" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-bold text-slate-900">Localização Recebida!</h3>
-                    <p className="text-sm text-slate-500 mt-2 max-w-xs mx-auto">
-                      O passageiro compartilhou a localização atual dele. Clique abaixo para iniciar a rota no Google Maps.
-                    </p>
-                  </div>
-                  
-                  <a
-                    href={passengerLocationUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl transition-all duration-300 shadow-md flex items-center justify-center gap-2 ring-4 ring-blue-100 text-xs uppercase tracking-wider text-center"
-                  >
-                    <Navigation className="w-4 h-4 rotate-45" />
-                    Rotear no Google Maps
-                  </a>
-                </div>
-
-                <div className="border-t border-slate-100 pt-6">
-                  <button
-                    onClick={() => setShowChat(!showChat)}
-                    className="w-full py-3 bg-slate-50 border border-slate-200 text-slate-600 rounded-xl font-bold hover:bg-slate-100 transition-colors flex items-center justify-center gap-2 text-xs uppercase tracking-wider"
-                  >
-                    <span>💬 {showChat ? 'Ocultar Mensagens' : 'Conversar com Passageiro'}</span>
-                  </button>
-                  {showChat && (
-                    <div className="mt-4">
-                      <Chat rideId={activeRide.id} currentUserId={currentUser.id} />
-                    </div>
-                  )}
-                </div>
-
-                <div className="pt-2 flex gap-3">
-                  {activeRide.status === 'accepted' ? (
-                    <>
-                      <button 
-                        onClick={async () => {
-                          try {
-                            await updateRideStatus(activeRide.id, 'in_progress');
-                          } catch (err) {
-                            alert('Erro ao iniciar corrida.');
-                          }
-                        }}
-                        className="flex-1 bg-orange-600 text-white py-4 rounded-xl font-bold hover:bg-orange-700 transition-colors shadow-md text-xs uppercase tracking-wider"
-                      >
-                        Iniciar corrida
-                      </button>
-                      <button 
-                        onClick={async () => {
-                          if (window.confirm('Tem certeza que deseja sair desta corrida?')) {
-                            try {
-                              await updateRideStatus(activeRide.id, 'cancelled');
-                            } catch (err) {
-                              alert('Erro ao cancelar corrida.');
-                            }
-                          }
-                        }}
-                        className="flex-1 bg-red-100 text-red-600 py-4 rounded-xl font-bold hover:bg-red-200 transition-colors shadow-sm border border-red-200 text-xs uppercase tracking-wider"
-                      >
-                        Sair
-                      </button>
-                    </>
-                  ) : (
-                    <button 
-                      onClick={async () => {
-                        try {
-                          await updateRideStatus(activeRide.id, 'completed');
-                        } catch (err) {
-                          alert('Erro ao finalizar corrida.');
-                        }
-                      }}
-                      className="flex-1 bg-emerald-600 text-white py-4 rounded-xl font-bold hover:bg-emerald-700 transition-colors shadow-md text-xs uppercase tracking-wider"
-                    >
-                      Finalizar Viagem
-                    </button>
-                  )}
-                </div>
-              </div>
             ) : (
-              <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-6">
-                <div className="flex justify-between items-center pb-6 border-b border-slate-100">
-                  <div>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">A Receber Direto</p>
-                    <p className="text-3xl font-bold text-slate-900">R$ {(activeRide.price || 0).toFixed(2)}</p>
-                  </div>
-                  <div className="w-12 h-12 bg-emerald-50 rounded-full flex items-center justify-center text-emerald-600">
-                    <Navigation className="w-6 h-6" />
-                  </div>
+              <div className="space-y-4">
+                <div className="bg-[#0F172A] text-slate-300 p-4 rounded-xl text-xs font-semibold flex justify-between items-center shadow-sm">
+                  <span>Viagens Ativas: {activeRides.length}</span>
+                  <span>{hasActiveExclusive ? "Viagem Exclusiva" : `${activeSharedCount}/3 Vagas Compartilhadas`}</span>
                 </div>
                 
-                <div className="flex flex-col gap-3">
-                  <div className="flex items-center gap-3 bg-slate-50 p-4 rounded-xl border border-slate-100">
-                    <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
-                      <Users className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Passageiro</p>
-                      <p className="text-sm font-bold text-slate-900">{users.find(u => u.id === activeRide.passengerId)?.name || 'Passageiro'}</p>
-                    </div>
-                  </div>
-
-                  {passengerLocationUrl && (
-                    <div className="bg-blue-50 border border-blue-200 p-4 rounded-xl flex flex-col gap-3">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-blue-600 animate-ping"></div>
-                        <p className="text-xs text-blue-800 font-bold">
-                          Localização compartilhada pelo passageiro!
-                        </p>
-                      </div>
-                      <a
-                        href={passengerLocationUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 px-4 rounded-xl transition-all duration-300 shadow-md shadow-blue-500/10 flex items-center justify-center gap-2 text-xs uppercase tracking-wider text-center"
-                      >
-                        <Navigation className="w-4 h-4 rotate-45" />
-                        Rotear no Google Maps
-                      </a>
-                    </div>
-                  )}
-                  {!activeRide.shared && activeRide.date && (
-                    <div className="flex items-center gap-3 bg-indigo-50 p-4 rounded-xl border border-indigo-100">
-                      <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600">
-                        <Clock className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider">Viagem Agendada Para</p>
-                        <p suppressHydrationWarning className="text-sm font-bold text-indigo-900">
-                          {!isNaN(new Date(activeRide.date).getTime()) ? format(new Date(activeRide.date), "dd/MM/yy 'às' HH:mm") : '--/--'}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <div className="relative h-32 bg-slate-50 rounded-xl overflow-hidden border border-slate-200 flex items-center justify-center mb-6 px-4">
-                  <div className="absolute left-[20px] top-6 bottom-6 w-0.5 bg-slate-300"></div>
-                  <div className="w-full space-y-6 relative z-10 pl-2">
-                     <div className="flex items-center gap-4">
-                        <div className="w-3 h-3 rounded-full bg-orange-600 outline outline-4 outline-white"></div>
-                        <div>
-                          <p className="text-sm font-bold text-slate-900">{activeRide.from}</p>
-                          <p className="text-[10px] text-slate-400 uppercase tracking-wider">Partida</p>
-                        </div>
-                     </div>
-                     <div className="flex items-center gap-4">
-                        <div className="w-3 h-3 rounded-full bg-emerald-500 outline outline-4 outline-white shadow-sm"></div>
-                        <div>
-                          <p className="text-sm font-bold text-slate-900">{activeRide.to}</p>
-                          <p className="text-[10px] text-slate-400 uppercase tracking-wider">Destino</p>
-                        </div>
-                     </div>
-                  </div>
-                </div>
-
-                <div className="flex justify-center">
-                  <button
-                    onClick={handleRequestLocation}
-                    disabled={locationLoading}
-                    className={`flex items-center gap-2 text-xs font-bold px-4 py-2 rounded-full border transition-colors ${userLocation ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'}`}
-                  >
-                    <Navigation2 className="w-3.5 h-3.5" />
-                    {locationLoading ? 'Localizando...' : userLocation ? 'Localização Ativa' : 'Compartilhar Minha Localização'}
-                  </button>
-                </div>
-
-                <div className="border-t border-slate-100 pt-6">
-                  <button
-                    onClick={() => setShowChat(!showChat)}
-                    className="w-full py-3 bg-slate-50 border border-slate-200 text-slate-600 rounded-xl font-bold hover:bg-slate-100 transition-colors flex items-center justify-center gap-2 text-xs uppercase tracking-wider"
-                  >
-                    <span>💬 {showChat ? 'Ocultar Mensagens' : 'Conversar com Passageiro'}</span>
-                  </button>
-                  {showChat && (
-                    <div className="mt-4">
-                      <Chat rideId={activeRide.id} currentUserId={currentUser.id} />
-                    </div>
-                  )}
-                </div>
-
-                <div className="pt-2 flex gap-3">
-                  {activeRide.status === 'accepted' ? (
-                    <>
+                {activeRides.map(ride => {
+                  const isExpanded = activeRide?.id === ride.id;
+                  const passengerName = users.find(u => u.id === ride.passengerId)?.name || 'Passageiro';
+                  const isPassengerLocShared = activeRide?.id === ride.id && passengerLocationUrl;
+                  
+                  return (
+                    <div key={ride.id} className={`bg-white rounded-2xl border shadow-sm transition-all overflow-hidden ${isExpanded ? 'border-orange-500 ring-2 ring-orange-100' : 'border-slate-200 hover:border-slate-300'}`}>
+                      {/* Accordion / Card Header */}
                       <button 
-                        onClick={async () => {
-                          try {
-                            await updateRideStatus(activeRide.id, 'in_progress');
-                          } catch (err) {
-                            alert('Erro ao iniciar corrida.');
-                          }
-                        }}
-                        className="flex-1 bg-orange-600 text-white py-4 rounded-xl font-bold hover:bg-orange-700 transition-colors shadow-md text-xs uppercase tracking-wider"
+                        type="button"
+                        onClick={() => setExpandedRideId(isExpanded ? null : ride.id)}
+                        className="w-full text-left p-4 flex justify-between items-center bg-slate-50/50 border-b border-slate-100 hover:bg-slate-50 transition-colors"
                       >
-                        Iniciar corrida
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-slate-900">{passengerName}</span>
+                            <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full uppercase ${ride.shared ? 'bg-orange-50 text-orange-600 border border-orange-100' : 'bg-amber-50 text-amber-600 border border-amber-100'}`}>
+                              {ride.shared ? 'Compartilhada' : 'Exclusiva'}
+                            </span>
+                          </div>
+                          <p className="text-[10px] text-slate-500 mt-1">{ride.from} → {ride.to}</p>
+                        </div>
+                        <div className="text-right flex items-center gap-3">
+                          <div>
+                            <span className="font-extrabold text-slate-900 block">R$ {ride.price.toFixed(2)}</span>
+                            <span className={`text-[9px] font-bold uppercase ${ride.status === 'in_progress' ? 'text-blue-600' : 'text-orange-600'}`}>
+                              {ride.status === 'in_progress' ? 'Em andamento' : 'Aceita'}
+                            </span>
+                          </div>
+                          <span className="text-slate-400 text-xs">
+                            {isExpanded ? '▼' : '▶'}
+                          </span>
+                        </div>
                       </button>
-                      <button 
-                        onClick={async () => {
-                          if (window.confirm('Tem certeza que deseja sair desta corrida?')) {
-                            try {
-                              await updateRideStatus(activeRide.id, 'cancelled');
-                            } catch (err) {
-                              alert('Erro ao cancelar corrida.');
-                            }
-                          }
-                        }}
-                        className="flex-1 bg-red-100 text-red-600 py-4 rounded-xl font-bold hover:bg-red-200 transition-colors shadow-sm border border-red-200 text-xs uppercase tracking-wider"
-                      >
-                        Sair
-                      </button>
-                    </>
-                  ) : (
-                    <button 
-                      onClick={async () => {
-                        try {
-                          await updateRideStatus(activeRide.id, 'completed');
-                        } catch (err) {
-                          alert('Erro ao finalizar corrida.');
-                        }
-                      }}
-                      className="flex-1 bg-emerald-600 text-white py-4 rounded-xl font-bold hover:bg-emerald-700 transition-colors shadow-md text-xs uppercase tracking-wider"
-                    >
-                      Finalizar Viagem
-                    </button>
-                  )}
-                </div>
+                      
+                      {/* Card Content (if expanded) */}
+                      {isExpanded && (
+                        <div className="p-5 space-y-6">
+                          {isPassengerLocShared ? (
+                            <div className="flex flex-col items-center text-center space-y-4">
+                              <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center animate-bounce mt-2 shadow-sm border border-blue-100">
+                                <Navigation className="w-6 h-6 rotate-45" />
+                              </div>
+                              <div>
+                                <h3 className="text-sm font-bold text-slate-900">Localização Recebida!</h3>
+                                <p className="text-xs text-slate-500 mt-1 max-w-xs mx-auto">
+                                  O passageiro compartilhou a localização dele.
+                                </p>
+                              </div>
+                              <a
+                                href={passengerLocationUrl!}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition-all duration-300 shadow-md flex items-center justify-center gap-2 text-xs uppercase tracking-wider"
+                              >
+                                <Navigation className="w-4 h-4 rotate-45" />
+                                Rotear no Google Maps
+                              </a>
+                            </div>
+                          ) : (
+                            <div className="space-y-4">
+                              <div className="flex flex-col gap-3">
+                                <div className="flex items-center gap-3 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                                  <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
+                                    <Users className="w-5 h-5" />
+                                  </div>
+                                  <div>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Passageiro</p>
+                                    <p className="text-sm font-bold text-slate-900">{passengerName}</p>
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="relative h-28 bg-slate-50 rounded-xl overflow-hidden border border-slate-200 flex items-center justify-center px-4">
+                                <div className="absolute left-[20px] top-4 bottom-4 w-0.5 bg-slate-300"></div>
+                                <div className="w-full space-y-4 relative z-10 pl-2">
+                                   <div className="flex items-center gap-4">
+                                      <div className="w-2.5 h-2.5 rounded-full bg-orange-600 outline outline-4 outline-white"></div>
+                                      <div>
+                                        <p className="text-xs font-bold text-slate-900">{ride.from}</p>
+                                        <p className="text-[9px] text-slate-400 uppercase tracking-wider">Partida</p>
+                                      </div>
+                                   </div>
+                                   <div className="flex items-center gap-4">
+                                      <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 outline outline-4 outline-white shadow-sm"></div>
+                                      <div>
+                                        <p className="text-xs font-bold text-slate-900">{ride.to}</p>
+                                        <p className="text-[9px] text-slate-400 uppercase tracking-wider">Destino</p>
+                                      </div>
+                                   </div>
+                                </div>
+                              </div>
+                              
+                              <div className="flex justify-center">
+                                <button
+                                  onClick={handleRequestLocation}
+                                  disabled={locationLoading}
+                                  className={`flex items-center gap-2 text-xs font-bold px-4 py-2 rounded-full border transition-colors ${userLocation ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'}`}
+                                >
+                                  <Navigation2 className="w-3.5 h-3.5" />
+                                  {locationLoading ? 'Localizando...' : userLocation ? 'Localização Ativa' : 'Compartilhar Minha Localização'}
+                                </button>
+                              </div>
+                            </div>
+                          )}
+
+                          <div className="border-t border-slate-100 pt-5">
+                            <button
+                              onClick={() => setShowChat(!showChat)}
+                              className="w-full py-2.5 bg-slate-50 border border-slate-200 text-slate-600 rounded-xl font-bold hover:bg-slate-100 transition-colors flex items-center justify-center gap-2 text-xs uppercase tracking-wider"
+                            >
+                              <span>💬 {showChat ? 'Ocultar Mensagens' : 'Conversar com Passageiro'}</span>
+                            </button>
+                            {showChat && (
+                              <div className="mt-4">
+                                <Chat rideId={ride.id} currentUserId={currentUser.id} />
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="pt-2 flex gap-3">
+                            {ride.status === 'accepted' ? (
+                              <>
+                                <button 
+                                  onClick={async () => {
+                                    try {
+                                      await updateRideStatus(ride.id, 'in_progress');
+                                    } catch (err) {
+                                      alert('Erro ao iniciar corrida.');
+                                    }
+                                  }}
+                                  className="flex-1 bg-orange-600 text-white py-3 rounded-xl font-bold hover:bg-orange-700 transition-colors shadow-md text-xs uppercase tracking-wider"
+                                >
+                                  Iniciar corrida
+                                </button>
+                                <button 
+                                  onClick={async () => {
+                                    if (window.confirm('Tem certeza que deseja sair desta corrida?')) {
+                                      try {
+                                        await updateRideStatus(ride.id, 'cancelled');
+                                      } catch (err) {
+                                        alert('Erro ao cancelar corrida.');
+                                      }
+                                    }
+                                  }}
+                                  className="flex-1 bg-red-100 text-red-600 py-3 rounded-xl font-bold hover:bg-red-200 transition-colors shadow-sm border border-red-200 text-xs uppercase tracking-wider"
+                                >
+                                  Sair
+                                </button>
+                              </>
+                            ) : (
+                              <button 
+                                onClick={async () => {
+                                  try {
+                                    await updateRideStatus(ride.id, 'completed');
+                                  } catch (err) {
+                                    alert('Erro ao finalizar corrida.');
+                                  }
+                                }}
+                                className="flex-1 bg-emerald-600 text-white py-3 rounded-xl font-bold hover:bg-emerald-700 transition-colors shadow-md text-xs uppercase tracking-wider"
+                              >
+                                Finalizar Viagem
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
