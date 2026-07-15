@@ -30,6 +30,7 @@ export default function DriverDashboard() {
   const [activeTab, setActiveTab] = useState<'requests' | 'active' | 'earnings'>('requests');
   const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
   const [locationLoading, setLocationLoading] = useState(false);  const [rejectedRides, setRejectedRides] = useState<string[]>([]);
+  const [isOnline, setIsOnline] = useState(true);
   const pendingRides = rides.filter(r => r.status === 'pending' && !rejectedRides.includes(r.id));
   const activeRide = rides.find(r => currentUser && r.driverId === currentUser.id && (r.status === 'accepted' || r.status === 'in_progress'));
   const completedRides = rides.filter(r => currentUser && r.driverId === currentUser.id && r.status === 'completed');
@@ -164,7 +165,13 @@ export default function DriverDashboard() {
       {/* Header */}
       <div className="bg-[#0F172A] text-white p-6 flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-bold tracking-tight">Motorista</h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-xl font-bold tracking-tight">Motorista</h2>
+            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold border uppercase tracking-wider ${isOnline ? 'bg-emerald-950 text-emerald-400 border-emerald-800' : 'bg-slate-800 text-slate-400 border-slate-700'}`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-emerald-400 animate-pulse' : 'bg-slate-400'}`}></span>
+              {isOnline ? 'Online' : 'Offline'}
+            </span>
+          </div>
           <p className="text-xs text-slate-400 flex items-center gap-1 mt-1 font-medium">
             <span className="text-amber-400">★</span> {(currentUser.rating || 5).toFixed(1)} • {(currentUser.ridesCompleted || 0)} viagens
           </p>
@@ -196,8 +203,96 @@ export default function DriverDashboard() {
       <div className="flex-1 overflow-y-auto p-4">
         {activeTab === 'requests' && (
           <div className="space-y-4">
-            {pendingRides.length === 0 ? (
-              <div className="text-center text-gray-500 mt-10">Nenhuma solicitação no momento.</div>
+            {!isOnline ? (
+              <div className="flex flex-col items-center justify-center p-6 bg-white rounded-2xl border border-slate-200 shadow-sm mt-2 text-center min-h-[400px]">
+                {/* Offline Visual */}
+                <div className="relative flex items-center justify-center my-6 h-40 w-40">
+                  <div className="absolute w-32 h-32 rounded-full bg-slate-50 border border-slate-200/60" />
+                  <div className="relative z-10 w-16 h-16 bg-slate-200 text-slate-400 rounded-full flex items-center justify-center shadow-sm">
+                    <Navigation className="w-7 h-7 rotate-45 opacity-55" />
+                  </div>
+                </div>
+
+                <div className="space-y-2 max-w-sm mb-6">
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-500 border border-slate-200">
+                    VOCÊ ESTÁ OFFLINE
+                  </div>
+                  <h3 className="text-lg font-extrabold text-slate-900 tracking-tight mt-1">Modo Offline Ativo</h3>
+                  <p className="text-slate-500 text-sm">
+                    Fique online para começar a receber solicitações de viagens e monitorar a demanda na região.
+                  </p>
+                </div>
+
+                {/* Go Online Button */}
+                <button 
+                  onClick={() => setIsOnline(true)}
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl transition-all duration-300 shadow-md flex items-center justify-center gap-2 ring-4 ring-blue-100 text-xs uppercase tracking-wider text-center cursor-pointer"
+                >
+                  Ficar Online
+                </button>
+              </div>
+            ) : pendingRides.length === 0 ? (
+              <div className="flex flex-col items-center justify-center p-6 bg-white rounded-2xl border border-slate-200 shadow-sm mt-2 text-center min-h-[400px]">
+                {/* Sonar Radar Visual */}
+                <div className="relative flex items-center justify-center my-6 h-40 w-40">
+                  <div 
+                    className="absolute w-36 h-36 rounded-full border-2 border-orange-500/20 animate-ping"
+                    style={{ animationDuration: '3s', animationDelay: '0s' }}
+                  />
+                  <div 
+                    className="absolute w-28 h-28 rounded-full border-2 border-orange-500/20 animate-ping"
+                    style={{ animationDuration: '3s', animationDelay: '1s' }}
+                  />
+                  <div 
+                    className="absolute w-20 h-20 rounded-full border-2 border-orange-500/30 animate-ping"
+                    style={{ animationDuration: '3s', animationDelay: '2s' }}
+                  />
+                  <div className="absolute w-32 h-32 rounded-full bg-orange-50/50 border border-orange-100" />
+                  <div className="relative z-10 w-16 h-16 bg-gradient-to-tr from-orange-600 to-amber-500 text-white rounded-full flex items-center justify-center shadow-lg shadow-orange-600/30">
+                    <Navigation className="w-7 h-7 rotate-45 animate-pulse" />
+                  </div>
+                </div>
+
+                <div className="space-y-2 max-w-sm">
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-600 border border-emerald-200">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+                    ONLINE E BUSCANDO
+                  </div>
+                  <h3 className="text-lg font-extrabold text-slate-900 tracking-tight mt-1">Aguardando Novas Corridas</h3>
+                  <p className="text-slate-500 text-sm">
+                    O sistema está monitorando passageiros na rota intermunicipal. Você receberá um aviso sonoro quando houver novas solicitações.
+                  </p>
+                </div>
+
+                {/* Operational Map Route Card */}
+                <div className="w-full mt-6 p-4 bg-slate-50 rounded-xl border border-slate-100 text-left space-y-3">
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Rota Operacional Principal</p>
+                  
+                  <div className="flex items-center gap-3">
+                    <div className="flex flex-col items-center gap-1">
+                      <div className="w-2.5 h-2.5 rounded-full bg-orange-600"></div>
+                      <div className="w-0.5 h-4 bg-slate-300"></div>
+                      <div className="w-2.5 h-2.5 rounded-full bg-emerald-600"></div>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-xs font-bold text-slate-800">Belo Horizonte (MG)</p>
+                      <p className="text-xs font-bold text-slate-800">Conceição do Mato Dentro (MG)</p>
+                    </div>
+                  </div>
+                  <div className="pt-2 border-t border-slate-200/60 flex justify-between items-center text-xs">
+                    <span className="text-slate-500">Demanda Estimada:</span>
+                    <span className="font-bold text-orange-600 animate-pulse">ALTA</span>
+                  </div>
+                </div>
+
+                {/* Go Offline Button */}
+                <button 
+                  onClick={() => setIsOnline(false)}
+                  className="mt-6 text-xs font-bold text-slate-500 hover:text-red-500 hover:bg-red-50 px-4 py-2.5 rounded-lg border border-slate-200 hover:border-red-200 transition-all uppercase tracking-wider cursor-pointer"
+                >
+                  Ficar Offline
+                </button>
+              </div>
             ) : (
               pendingRides.map(ride => (
                 <div key={ride.id} className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
@@ -236,7 +331,7 @@ export default function DriverDashboard() {
                           setRejectedRides(prev => [...prev, ride.id]);
                         }
                       }}
-                      className="flex-1 bg-red-100 text-red-600 py-3.5 rounded-xl font-bold hover:bg-red-200 transition-colors shadow-sm border border-red-200 flex items-center justify-center gap-2"
+                      className="flex-1 bg-red-100 text-red-600 py-3.5 rounded-xl font-bold hover:bg-red-200 transition-colors shadow-sm border border-red-200 flex items-center justify-center gap-2 cursor-pointer"
                     >
                       <XCircle className="w-4 h-4" /> Recusar
                     </button>
@@ -250,7 +345,7 @@ export default function DriverDashboard() {
                           alert('Erro ao aceitar viagem. Esta corrida pode já ter sido aceita por outro motorista ou cancelada.');
                         }
                       }}
-                      className="flex-1 bg-blue-600 text-white py-3.5 rounded-xl font-bold hover:bg-blue-700 transition-colors shadow-md flex items-center justify-center gap-2"
+                      className="flex-1 bg-blue-600 text-white py-3.5 rounded-xl font-bold hover:bg-blue-700 transition-colors shadow-md flex items-center justify-center gap-2 cursor-pointer"
                     >
                       <CheckCircle className="w-4 h-4" /> Aceitar
                     </button>
@@ -264,7 +359,21 @@ export default function DriverDashboard() {
         {activeTab === 'active' && (
           <div>
             {!activeRide ? (
-              <div className="text-center text-gray-500 mt-10">Você não tem viagem em andamento.</div>
+              <div className="flex flex-col items-center justify-center p-6 bg-white rounded-2xl border border-slate-200 shadow-sm mt-2 text-center min-h-[350px]">
+                <div className="w-16 h-16 bg-slate-50 text-slate-400 rounded-full flex items-center justify-center mb-4 border border-slate-100">
+                  <Navigation className="w-8 h-8 rotate-45 opacity-40" />
+                </div>
+                <h3 className="text-lg font-bold text-slate-900">Sem Corrida Ativa</h3>
+                <p className="text-slate-500 text-sm mt-2 max-w-xs">
+                  Você não está em nenhuma viagem no momento. Vá para a aba de solicitações para ver ou aceitar novas corridas.
+                </p>
+                <button
+                  onClick={() => setActiveTab('requests')}
+                  className="mt-6 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-xl transition-all duration-300 shadow-sm text-xs uppercase tracking-wider cursor-pointer"
+                >
+                  Ver Solicitações
+                </button>
+              </div>
             ) : passengerLocationUrl ? (
               <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-6">
                 <div className="flex flex-col items-center text-center space-y-6">

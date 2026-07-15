@@ -21,11 +21,9 @@ async function main() {
   const snapshot = await getDocs(ridesRef);
   let count = 0;
   for (const document of snapshot.docs) {
-    if (document.data().status === 'accepted' || document.data().status === 'in_progress') {
-        console.log("Deleting ride:", document.id, document.data().status);
-        await deleteDoc(doc(db, 'rides', document.id));
-        count++;
-    }
+    console.log("Deleting ride:", document.id, document.data().status);
+    await deleteDoc(doc(db, 'rides', document.id));
+    count++;
   }
   console.log(`Deleted ${count} rides`);
   process.exit(0);
