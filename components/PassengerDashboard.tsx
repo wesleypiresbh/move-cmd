@@ -76,7 +76,7 @@ export default function PassengerDashboard() {
       const locationMsg = snapshot.docs
         .map(d => d.data())
         .reverse()
-        .find(msg => msg.text && msg.text.includes('📍 Minha localização atual:'));
+        .find(msg => msg.text && (msg.text.includes('📍 Motorista local atual:') || msg.text.includes('📍 Minha localização atual:')));
       
       if (locationMsg) {
         const match = locationMsg.text.match(/https:\/\/[^ ]+/);
@@ -133,7 +133,7 @@ export default function PassengerDashboard() {
             addMessage({
               rideId: activeRide.id,
               senderId: currentUser.id,
-              text: `📍 Minha localização atual: https://www.google.com/maps/search/?api=1&query=${position.coords.latitude},${position.coords.longitude}`
+              text: `📍 Passageiro local atual: https://www.google.com/maps/search/?api=1&query=${position.coords.latitude},${position.coords.longitude}`
             });
             alert("Sua localização foi compartilhada no chat!");
           }
