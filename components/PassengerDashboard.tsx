@@ -4,7 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { useAppStore } from '@/lib/StoreProvider';
 import type { Location } from '@/lib/types';
 import { MapPin, Users, CreditCard, Clock, ChevronRight, Car, Navigation2, LogOut } from 'lucide-react';
-import { auth } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
+import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -24,6 +25,7 @@ export default function PassengerDashboard() {
   const [locationLoading, setLocationLoading] = useState(false);
   const [isBookingMode, setIsBookingMode] = useState(false);
   const [scheduleDate, setScheduleDate] = useState<string>('');
+  const [driverLocationUrl, setDriverLocationUrl] = useState<string | null>(null);
 
   
   const getStatusLabel = (status: string) => {
@@ -60,6 +62,35 @@ export default function PassengerDashboard() {
       setActiveTab('book');
     }
   }, [activeRide?.status, activeTab]);
+
+  useEffect(() => {
+    if (!activeRide || activeRide.status === 'pending') {
+      setDriverLocationUrl(null);
+      return;
+    }
+    const q = query(
+      collection(db, 'rides', activeRide.id, 'messages'),
+      orderBy('timestamp', 'asc')
+    );
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const locationMsg = snapshot.docs
+        .map(d => d.data())
+        .reverse()
+        .find(msg => msg.text && msg.text.includes('📍 Minha localização atual:'));
+      
+      if (locationMsg) {
+        const match = locationMsg.text.match(/https:\/\/[^ ]+/);
+        if (match) {
+          setDriverLocationUrl(match[0]);
+        }
+      } else {
+        setDriverLocationUrl(null);
+      }
+    }, (error) => {
+      console.error("Erro ao buscar localização do motorista:", error);
+    });
+    return () => unsubscribe();
+  }, [activeRide?.id]);
 
   if (loading) return <div className="p-8 text-center text-slate-500">Carregando dados do usuário...</div>;
   if (!currentUser) return <div className="p-8 text-center bg-white m-4 rounded-xl shadow-sm border border-red-200 text-red-600">Perfil não encontrado.</div>;
@@ -196,6 +227,30 @@ export default function PassengerDashboard() {
                     </button>
                   </div>
 
+                  {/* Status do Motorista */}
+                  {driverLocationUrl && (
+                    <div className="w-full p-4 rounded-xl bg-blue-50 border border-blue-100 text-left">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center animate-bounce shrink-0">
+                          <Navigation2 className="w-4 h-4 rotate-45" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-slate-900">Motorista a Caminho</p>
+                          <p className="text-[10px] text-slate-500 mt-0.5">Acompanhe o deslocamento em tempo real.</p>
+                        </div>
+                      </div>
+                      <a
+                        href={driverLocationUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-3 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded-xl transition-all duration-300 shadow-md flex items-center justify-center gap-2 text-xs uppercase tracking-wider"
+                      >
+                        <Navigation2 className="w-3.5 h-3.5 rotate-45" />
+                        Acompanhar no Maps
+                      </a>
+                    </div>
+                  )}
+
                   {/* Chat Integration */}
                   <div className="w-full border-t border-slate-100 pt-6">
                     <button
@@ -291,6 +346,34 @@ export default function PassengerDashboard() {
                       </button>
                     )}
                   </div>
+
+                  {/* Status do Motorista */}
+                  {activeRide.status === 'accepted' && (
+                    <div className="mb-4 p-4 rounded-xl bg-blue-50 border border-blue-100 text-left">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center animate-bounce shrink-0">
+                          <Navigation2 className="w-4 h-4 rotate-45" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-slate-900">Motorista a Caminho</p>
+                          <p className="text-[10px] text-slate-500 mt-0.5">
+                            {driverLocationUrl ? "Acompanhe o deslocamento em tempo real." : "Aguardando o motorista iniciar o compartilhamento."}
+                          </p>
+                        </div>
+                      </div>
+                      {driverLocationUrl && (
+                        <a
+                          href={driverLocationUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="mt-3 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded-xl transition-all duration-300 shadow-md flex items-center justify-center gap-2 text-xs uppercase tracking-wider"
+                        >
+                          <Navigation2 className="w-3.5 h-3.5 rotate-45" />
+                          Acompanhar no Maps
+                        </a>
+                      )}
+                    </div>
+                  )}
 
                   {/* Chat Integration */}
                   <div className="border-t border-slate-100 pt-6">
@@ -477,62 +560,62 @@ export default function PassengerDashboard() {
       )}
 
       {/* Sliding Bottom Sheet for "Aguardando Motorista" */}
-      <div 
-        className={`absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-[0_-8px_30px_rgb(0,0,0,0.12)] border-t border-slate-100 p-6 transition-transform duration-500 ease-out z-50 transform ${
-          activeRide?.status === 'pending' ? 'translate-y-0' : 'translate-y-full'
-        }`}
-      >
-        <div className="w-12 h-1 bg-slate-200 rounded-full mx-auto mb-6"></div>
-        
-        <div className="flex flex-col items-center text-center space-y-6">
-          {/* Radar animation */}
-          <div className="relative flex items-center justify-center h-28 w-28">
-            <div className="absolute w-24 h-24 rounded-full border-2 border-orange-500/20 animate-ping" style={{ animationDuration: '3s', animationDelay: '0s' }}></div>
-            <div className="absolute w-18 h-18 rounded-full border-2 border-orange-500/25 animate-ping" style={{ animationDuration: '3s', animationDelay: '1.5s' }}></div>
-            <div className="absolute w-20 h-20 rounded-full bg-orange-50 flex items-center justify-center border border-orange-100">
-              <Car className="w-10 h-10 text-orange-600 animate-pulse" />
-            </div>
-          </div>
+      {activeRide?.status === 'pending' && (
+        <div 
+          className="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-[0_-8px_30px_rgb(0,0,0,0.12)] border-t border-slate-100 p-6 z-50 transform translate-y-0"
+        >
+          <div className="w-12 h-1 bg-slate-200 rounded-full mx-auto mb-6"></div>
           
-          <div className="space-y-2">
-            <h3 className="text-xl font-extrabold text-slate-900 tracking-tight">Aguardando Motorista</h3>
-            <p className="text-xs text-slate-500 font-medium max-w-[250px] mx-auto">
-              Estamos procurando um motorista próximo para realizar a sua viagem.
-            </p>
-          </div>
-          
-          {/* Ride Details Card */}
-          <div className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 text-left space-y-3">
-            <div className="flex justify-between items-center pb-2.5 border-b border-slate-200/60">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Valor Estimado</span>
-              <span className="text-lg font-bold text-slate-900">R$ {activeRide?.price.toFixed(2)}</span>
+          <div className="flex flex-col items-center text-center space-y-6">
+            {/* Radar animation */}
+            <div className="relative flex items-center justify-center h-28 w-28">
+              <div className="absolute w-24 h-24 rounded-full border-2 border-orange-500/20 animate-ping" style={{ animationDuration: '3s', animationDelay: '0s' }}></div>
+              <div className="absolute w-18 h-18 rounded-full border-2 border-orange-500/25 animate-ping" style={{ animationDuration: '3s', animationDelay: '1.5s' }}></div>
+              <div className="absolute w-20 h-20 rounded-full bg-orange-50 flex items-center justify-center border border-orange-100">
+                <Car className="w-10 h-10 text-orange-600 animate-pulse" />
+              </div>
             </div>
             
-            <div className="space-y-3 pt-1">
-              <div className="flex items-center gap-2.5 text-xs font-bold text-slate-700">
-                <div className="w-2 h-2 rounded-full bg-orange-600 outline outline-2 outline-white shrink-0"></div>
-                <span className="truncate">{activeRide?.from}</span>
+            <div className="space-y-2">
+              <h3 className="text-xl font-extrabold text-slate-900 tracking-tight">Aguardando Motorista</h3>
+              <p className="text-xs text-slate-500 font-medium max-w-[250px] mx-auto">
+                Estamos procurando um motorista próximo para realizar a sua viagem.
+              </p>
+            </div>
+            
+            {/* Ride Details Card */}
+            <div className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 text-left space-y-3">
+              <div className="flex justify-between items-center pb-2.5 border-b border-slate-200/60">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Valor Estimado</span>
+                <span className="text-lg font-bold text-slate-900">R$ {activeRide?.price.toFixed(2)}</span>
               </div>
-              <div className="flex items-center gap-2.5 text-xs font-bold text-slate-700">
-                <div className="w-2 h-2 rounded-full bg-emerald-500 outline outline-2 outline-white shrink-0"></div>
-                <span className="truncate">{activeRide?.to}</span>
+              
+              <div className="space-y-3 pt-1">
+                <div className="flex items-center gap-2.5 text-xs font-bold text-slate-700">
+                  <div className="w-2 h-2 rounded-full bg-orange-600 outline outline-2 outline-white shrink-0"></div>
+                  <span className="truncate">{activeRide?.from}</span>
+                </div>
+                <div className="flex items-center gap-2.5 text-xs font-bold text-slate-700">
+                  <div className="w-2 h-2 rounded-full bg-emerald-500 outline outline-2 outline-white shrink-0"></div>
+                  <span className="truncate">{activeRide?.to}</span>
+                </div>
               </div>
             </div>
+            
+            {/* Cancel button */}
+            <button
+              onClick={() => {
+                if (window.confirm('Tem certeza que deseja cancelar esta viagem?')) {
+                  updateRideStatus(activeRide!.id, 'cancelled').then(() => setIsBookingMode(false)).catch(e => { console.error(e); alert('Erro ao cancelar.'); });
+                }
+              }}
+              className="w-full bg-red-50 hover:bg-red-100 text-red-600 py-3.5 rounded-xl font-bold uppercase tracking-wider text-xs transition-colors cursor-pointer border border-red-200 shadow-sm"
+            >
+              Cancelar
+            </button>
           </div>
-          
-          {/* Cancel button */}
-          <button
-            onClick={() => {
-              if (window.confirm('Tem certeza que deseja cancelar esta viagem?')) {
-                updateRideStatus(activeRide!.id, 'cancelled').then(() => setIsBookingMode(false)).catch(e => { console.error(e); alert('Erro ao cancelar.'); });
-              }
-            }}
-            className="w-full bg-red-50 hover:bg-red-100 text-red-600 py-3.5 rounded-xl font-bold uppercase tracking-wider text-xs transition-colors cursor-pointer border border-red-200 shadow-sm"
-          >
-            Cancelar
-          </button>
         </div>
-      </div>
+      )}
     </div>
   );
 }
