@@ -324,6 +324,22 @@ export default function DriverDashboard() {
                   </p>
                 </div>
               </div>
+            ) : activeRides.length > 0 ? (
+              <div className="flex flex-col items-center justify-center p-6 bg-white rounded-2xl border border-slate-200 shadow-sm mt-2 text-center min-h-[400px]">
+                <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mb-4 border border-slate-100">
+                  <Navigation className="w-8 h-8 rotate-45 opacity-60" />
+                </div>
+                <h3 className="text-lg font-bold text-slate-900">Viagem em Andamento</h3>
+                <p className="text-slate-500 text-sm mt-2 max-w-xs mx-auto">
+                  Você possui uma viagem ativa no momento. Vá para a aba "Viagem Atual" para gerenciar a corrida ou conversar com o passageiro.
+                </p>
+                <button
+                  onClick={() => setActiveTab('active')}
+                  className="mt-6 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-xl transition-all duration-300 shadow-sm text-xs uppercase tracking-wider cursor-pointer"
+                >
+                  Ver Viagem Atual
+                </button>
+              </div>
             ) : pendingRides.length === 0 ? (
               <div className="flex flex-col items-center justify-center p-6 bg-white rounded-2xl border border-slate-200 shadow-sm mt-2 text-center min-h-[400px]">
                 {/* Sonar Radar Visual */}
