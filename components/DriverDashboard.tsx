@@ -204,6 +204,28 @@ export default function DriverDashboard() {
     }
   };
 
+  const handleRouteToPassenger = () => {
+    if (passengerLocationUrl) {
+      window.open(passengerLocationUrl, '_blank');
+    }
+    if ('geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          if (activeRide && currentUser) {
+            addMessage({
+              rideId: activeRide.id,
+              senderId: currentUser.id,
+              text: `📍 Minha localização atual: https://www.google.com/maps/search/?api=1&query=${position.coords.latitude},${position.coords.longitude}`
+            });
+          }
+        },
+        (error) => {
+          console.error("Erro ao obter localização do motorista ao rotear", error);
+        }
+      );
+    }
+  };
+
   return (
     <div className="max-w-md w-full mx-auto h-full flex flex-col bg-[#F8FAFC]">
       {/* Header */}
@@ -493,15 +515,13 @@ export default function DriverDashboard() {
                                   O passageiro compartilhou a localização dele.
                                 </p>
                               </div>
-                              <a
-                                href={passengerLocationUrl!}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition-all duration-300 shadow-md flex items-center justify-center gap-2 text-xs uppercase tracking-wider"
+                              <button
+                                onClick={handleRouteToPassenger}
+                                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition-all duration-300 shadow-md flex items-center justify-center gap-2 text-xs uppercase tracking-wider cursor-pointer"
                               >
                                 <Navigation className="w-4 h-4 rotate-45" />
                                 Rotear no Google Maps
-                              </a>
+                              </button>
                             </div>
                           ) : (
                             <div className="space-y-4">
