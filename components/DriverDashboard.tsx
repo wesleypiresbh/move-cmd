@@ -27,7 +27,7 @@ export default function DriverDashboard() {
   
 
   
-  const [activeTab, setActiveTab] = useState<'requests' | 'active' | 'earnings'>('requests');
+  const [activeTab, setActiveTab] = useState<'requests' | 'active' | 'chat' | 'earnings'>('requests');
   const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
   const [locationLoading, setLocationLoading] = useState(false);
   const [rejectedRides, setRejectedRides] = useState<string[]>([]);
@@ -139,6 +139,12 @@ export default function DriverDashboard() {
     prevPendingCountRef.current = pendingRides.length;
   }, [pendingRides.length]);
 
+  useEffect(() => {
+    if (activeTab === 'chat' && activeRides.length === 0) {
+      setActiveTab('requests');
+    }
+  }, [activeRides.length, activeTab]);
+
   if (loading) return (
     <div className="p-8 text-center flex flex-col items-center justify-center h-full">
       <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
@@ -233,12 +239,17 @@ export default function DriverDashboard() {
         <button onClick={() => setActiveTab('active')} className={`flex-1 py-4 text-[10px] font-bold uppercase tracking-wider ${activeTab === 'active' ? 'text-orange-600 border-b-2 border-orange-600' : 'text-slate-400'}`}>
           Viagem Atual
         </button>
+        {activeRides.length > 0 && (
+          <button onClick={() => setActiveTab('chat')} className={`flex-1 py-4 text-[10px] font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 ${activeTab === 'chat' ? 'text-orange-600 border-b-2 border-orange-600' : 'text-slate-400'}`}>
+            Chat
+          </button>
+        )}
         <button onClick={() => setActiveTab('earnings')} className={`flex-1 py-4 text-[10px] font-bold uppercase tracking-wider ${activeTab === 'earnings' ? 'text-orange-600 border-b-2 border-orange-600' : 'text-slate-400'}`}>
           Rendimentos
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4">
+      <div className={`flex-1 ${activeTab === 'chat' ? 'flex flex-col overflow-hidden p-2 bg-[#F8FAFC]' : 'overflow-y-auto p-4'}`}>
         {activeTab === 'requests' && (
           <div className="space-y-4">
             {!isOnline ? (
@@ -541,16 +552,14 @@ export default function DriverDashboard() {
 
                           <div className="border-t border-slate-100 pt-5">
                             <button
-                              onClick={() => setShowChat(!showChat)}
+                              onClick={() => {
+                                setExpandedRideId(ride.id);
+                                setActiveTab('chat');
+                              }}
                               className="w-full py-2.5 bg-slate-50 border border-slate-200 text-slate-600 rounded-xl font-bold hover:bg-slate-100 transition-colors flex items-center justify-center gap-2 text-xs uppercase tracking-wider"
                             >
-                              <span>💬 {showChat ? 'Ocultar Mensagens' : 'Conversar com Passageiro'}</span>
+                              <span>💬 Conversar com Passageiro</span>
                             </button>
-                            {showChat && (
-                              <div className="mt-4">
-                                <Chat rideId={ride.id} currentUserId={currentUser.id} />
-                              </div>
-                            )}
                           </div>
 
                           <div className="pt-2 flex gap-3">
@@ -605,6 +614,32 @@ export default function DriverDashboard() {
                 })}
               </div>
             )}
+          </div>
+        )}
+
+        {activeTab === 'chat' && activeRide && (
+          <div className="flex-1 flex flex-col h-full bg-white rounded-t-2xl overflow-hidden border border-slate-200">
+            <div className="bg-slate-50 px-4 py-3 border-b border-slate-200">
+              <p className="text-xs font-bold text-slate-800">
+                Passageiro: {users.find(u => u.id === activeRide.passengerId)?.name || 'Passageiro'}
+              </p>
+              <p className="text-[10px] text-slate-400 uppercase tracking-wider">
+                Corrida: {activeRide.from} → {activeRide.to}
+              </p>
+            </div>
+            <div className="flex-1 min-h-0 flex flex-col">
+              <Chat 
+                rideId={activeRide.id} 
+                currentUserId={currentUser.id} 
+                className="flex-1 h-full border-0 rounded-none bg-transparent"
+              />
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'chat' && !activeRide && (
+          <div className="flex flex-col items-center justify-center p-6 bg-white rounded-2xl border border-slate-200 shadow-sm mt-2 text-center min-h-[350px]">
+            <p className="text-slate-500 text-sm">Nenhum chat ativo no momento.</p>
           </div>
         )}
 

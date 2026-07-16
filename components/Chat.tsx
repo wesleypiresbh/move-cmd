@@ -8,7 +8,15 @@ import { db } from '@/lib/firebase';
 import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import type { Message } from '@/lib/types';
 
-export default function Chat({ rideId, currentUserId }: { rideId: string, currentUserId: string }) {
+export default function Chat({ 
+  rideId, 
+  currentUserId, 
+  className = "h-72 border border-slate-200 rounded-2xl" 
+}: { 
+  rideId: string; 
+  currentUserId: string; 
+  className?: string; 
+}) {
   const { addMessage } = useAppStore();
   const [messages, setMessages] = useState<Message[]>([]);
   const [text, setText] = useState('');
@@ -65,7 +73,7 @@ export default function Chat({ rideId, currentUserId }: { rideId: string, curren
   };
 
   return (
-    <div className="flex flex-col h-72 border border-slate-200 rounded-2xl overflow-hidden bg-[#F8FAFC]">
+    <div className={`flex flex-col overflow-hidden bg-[#F8FAFC] ${className}`}>
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center px-4">
@@ -122,7 +130,7 @@ export default function Chat({ rideId, currentUserId }: { rideId: string, curren
             value={text}
             onChange={(e) => setText(e.target.value)}
             placeholder="Sua mensagem..." 
-            className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-all text-slate-900 placeholder:text-slate-400"
+            className="flex-1 min-w-0 w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-all text-slate-900 placeholder:text-slate-400"
           />
           <button type="submit" disabled={!text.trim()} className="p-3 bg-orange-600 text-white rounded-xl disabled:opacity-50 hover:bg-orange-700 transition-colors shadow-sm">
             <Send className="w-4 h-4" />
