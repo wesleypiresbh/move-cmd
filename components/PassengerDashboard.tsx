@@ -357,7 +357,7 @@ export default function PassengerDashboard() {
                         <div>
                           <p className="text-xs font-bold text-slate-900">Motorista a Caminho</p>
                           <p className="text-[10px] text-slate-500 mt-0.5">
-                            {driverLocationUrl ? "Acompanhe o deslocamento em tempo real." : "Aguardando o motorista iniciar o compartilhamento."}
+                            {driverLocationUrl ? "Acompanhe o deslocamento em tempo real." : "Localização Compartilhada no Chat"}
                           </p>
                         </div>
                       </div>
