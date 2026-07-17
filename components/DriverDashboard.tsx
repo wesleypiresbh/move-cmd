@@ -274,6 +274,28 @@ export default function DriverDashboard() {
       <div className={`flex-1 ${activeTab === 'chat' ? 'flex flex-col overflow-hidden p-2 bg-[#F8FAFC]' : 'overflow-y-auto p-4'}`}>
         {activeTab === 'requests' && (
           <div className="space-y-4">
+            {isOnline && !isFullyBlocked && activeSharedCount > 0 && (
+              <div className="bg-orange-50 border border-orange-200 rounded-2xl p-4 flex items-center justify-between shadow-sm">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-orange-100 flex items-center justify-center text-orange-600">
+                    <Users className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-extrabold text-orange-950">Viagem Compartilhada em Andamento</p>
+                    <p className="text-[10px] text-orange-700 font-bold mt-0.5">
+                      Vagas ocupadas: {activeSharedCount}/3 • Aguardando novos passageiros
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setActiveTab('active')}
+                  className="bg-orange-600 hover:bg-orange-700 text-white text-[9px] font-bold px-3 py-2 rounded-xl transition-colors uppercase tracking-wider cursor-pointer"
+                >
+                  Ver Viagem
+                </button>
+              </div>
+            )}
+
             {!isOnline ? (
               <div className="flex flex-col items-center justify-center p-6 bg-white rounded-2xl border border-slate-200 shadow-sm mt-2 text-center min-h-[400px]">
                 {/* Offline Visual */}
@@ -323,22 +345,6 @@ export default function DriverDashboard() {
                       : "Você atingiu o limite de vagas para Viagens Compartilhadas (3 vagas ocupadas)."}
                   </p>
                 </div>
-              </div>
-            ) : activeRides.length > 0 ? (
-              <div className="flex flex-col items-center justify-center p-6 bg-white rounded-2xl border border-slate-200 shadow-sm mt-2 text-center min-h-[400px]">
-                <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mb-4 border border-slate-100">
-                  <Navigation className="w-8 h-8 rotate-45 opacity-60" />
-                </div>
-                <h3 className="text-lg font-bold text-slate-900">Viagem em Andamento</h3>
-                <p className="text-slate-500 text-sm mt-2 max-w-xs mx-auto">
-                  Você possui uma viagem ativa no momento. Vá para a aba "Viagem Atual" para gerenciar a corrida ou conversar com o passageiro.
-                </p>
-                <button
-                  onClick={() => setActiveTab('active')}
-                  className="mt-6 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-xl transition-all duration-300 shadow-sm text-xs uppercase tracking-wider cursor-pointer"
-                >
-                  Ver Viagem Atual
-                </button>
               </div>
             ) : pendingRides.length === 0 ? (
               <div className="flex flex-col items-center justify-center p-6 bg-white rounded-2xl border border-slate-200 shadow-sm mt-2 text-center min-h-[400px]">
